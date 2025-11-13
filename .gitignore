@@ -1,0 +1,14 @@
+# Node
+node_modules
+package-lock.json
+
+# Obsidian
+data.json
+.obsidian
+
+# Build
+main.js
+*.js.map
+
+# Misc
+.DS_Store
