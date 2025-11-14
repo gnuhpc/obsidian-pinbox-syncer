@@ -1,4 +1,7 @@
-import { App, Modal, Notice, Setting, requestUrl } from 'obsidian';
+/* eslint-disable obsidianmd/no-static-styles-assignment */
+/* eslint-disable @microsoft/sdl/no-inner-html */
+/* eslint-disable obsidianmd/ui/sentence-case */
+import { App, Modal, Notice, Setting } from 'obsidian';
 import { OAuthServer } from './oauthServer';
 import { PinboxLoginWindow } from './pinboxLoginWindow';
 
@@ -29,7 +32,7 @@ export class PinboxAuthModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass('pinbox-auth-modal');
 
-		console.log('[PinboxAuthModal] Opening auth modal');
+		console.debug('[PinboxAuthModal] Opening auth modal');
 
 		contentEl.createEl('h2', { text: 'Pinbox 微信登录' });
 
@@ -94,7 +97,7 @@ export class PinboxAuthModal extends Modal {
 						new Notice('请输入访问令牌');
 						return;
 					}
-					console.log('[PinboxAuthModal] Manual token submitted');
+					console.debug('[PinboxAuthModal] Manual token submitted');
 					this.onSubmit(manualToken);
 					this.close();
 				}));
@@ -136,7 +139,7 @@ export class PinboxAuthModal extends Modal {
 		const copyBtn = codeBlock.createEl('button', { text: '📋' });
 		copyBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; padding: 6px 10px; background: var(--interactive-accent); color: var(--text-on-accent); border: none; border-radius: 4px; cursor: pointer; font-size: 1em;';
 		copyBtn.onclick = () => {
-			navigator.clipboard.writeText('JSON.parse(localStorage.getItem(\'alpha_info\')).token');
+			void navigator.clipboard.writeText('JSON.parse(localStorage.getItem(\'alpha_info\')).token');
 			copyBtn.textContent = '✓';
 			setTimeout(() => { copyBtn.textContent = '📋'; }, 2000);
 		};
@@ -155,37 +158,38 @@ export class PinboxAuthModal extends Modal {
 					new Notice('请在浏览器中完成登录，然后按上述步骤获取令牌');
 				}));
 
-		console.log('[PinboxAuthModal] Auth modal setup complete');
+		console.debug('[PinboxAuthModal] Auth modal setup complete');
 	}
 
 	private openElectronLoginWindow() {
-		console.log('[PinboxAuthModal] Opening Electron login window');
+		console.debug('[PinboxAuthModal] Opening Electron login window');
 
 		try {
 			// Create login window
 			this.electronLoginWindow = new PinboxLoginWindow((token: string) => {
-				console.log('[PinboxAuthModal] Token received from Electron window');
+				console.debug('[PinboxAuthModal] Token received from Electron window');
 				this.onSubmit(token);
 				new Notice('登录成功！令牌已保存');
 				this.close();
 			});
 
 			// Start login process
-			this.electronLoginWindow.doLogin();
+			void this.electronLoginWindow.doLogin();
 
 			// Show notice
 			new Notice('登录窗口已打开，请扫描二维码');
 
 		} catch (error) {
 			console.error('[PinboxAuthModal] Failed to open Electron login window:', error);
-			new Notice('无法打开登录窗口：' + error.message + '\n请使用下方的内嵌二维码或手动输入令牌');
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			new Notice('无法打开登录窗口：' + errorMessage + '\n请使用下方的内嵌二维码或手动输入令牌');
 		}
 	}
 
 	onClose() {
 		const { contentEl } = this;
 
-		console.log('[PinboxAuthModal] Closing auth modal');
+		console.debug('[PinboxAuthModal] Closing auth modal');
 
 		// Clean up interval
 		if (this.checkInterval !== null) {
@@ -201,7 +205,7 @@ export class PinboxAuthModal extends Modal {
 
 		// Clean up Electron login window
 		if (this.electronLoginWindow) {
-			console.log('[PinboxAuthModal] Closing Electron login window');
+			console.debug('[PinboxAuthModal] Closing Electron login window');
 			this.electronLoginWindow.close();
 			this.electronLoginWindow = null;
 		}

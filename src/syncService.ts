@@ -1,9 +1,7 @@
+/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, Notice, TFile, normalizePath, requestUrl } from 'obsidian';
 import { PinboxAPI, PinboxBookmark } from './pinboxApi';
-import * as TurndownServiceImport from 'turndown';
-
-// Handle both ESM and CommonJS imports
-const TurndownService = (TurndownServiceImport as any).default || TurndownServiceImport;
+import TurndownService from 'turndown';
 
 export class SyncService {
 	private app: App;
@@ -21,22 +19,22 @@ export class SyncService {
 	}
 
 	async sync(): Promise<number> {
-		console.log('[SyncService] Starting sync process...');
+		console.debug('[SyncService] Starting sync process...');
 		try {
-			new Notice('开始同步 Pinbox...');
+			new Notice('开始同步 Pinbox 书签...');
 
 			// Ensure sync folder exists
-			console.log('[SyncService] Ensuring sync folder exists:', this.syncFolder);
+			console.debug('[SyncService] Ensuring sync folder exists:', this.syncFolder);
 			await this.ensureFolderExists(this.syncFolder);
 
 			// Fetch all bookmarks
-			console.log('[SyncService] Fetching all bookmarks...');
+			console.debug('[SyncService] Fetching all bookmarks...');
 			const bookmarks = await this.api.getAllBookmarks();
-			console.log('[SyncService] Fetched', bookmarks.length, 'bookmarks');
+			console.debug('[SyncService] Fetched', bookmarks.length, 'bookmarks');
 
 			if (bookmarks.length === 0) {
-				console.log('[SyncService] No bookmarks found');
-				new Notice('未找到书签');
+				console.debug('[SyncService] No bookmarks found');
+				new Notice('未找到任何书签');
 				return 0;
 			}
 
@@ -44,9 +42,9 @@ export class SyncService {
 			let syncedCount = 0;
 			let newCount = 0;
 			let skippedCount = 0;
-			console.log('[SyncService] Starting to create/update bookmark files...');
+			console.debug('[SyncService] Starting to create/update bookmark files...');
 			for (const bookmark of bookmarks) {
-				console.log(`[SyncService] Processing bookmark ${syncedCount + 1}/${bookmarks.length}: ${bookmark.title} (id=${bookmark.id})`);
+				console.debug(`[SyncService] Processing bookmark ${syncedCount + 1}/${bookmarks.length}: ${bookmark.title} (id=${bookmark.id})`);
 				const result = await this.createOrUpdateBookmark(bookmark);
 				syncedCount++;
 				if (result === 'created') {
@@ -56,12 +54,13 @@ export class SyncService {
 				}
 			}
 
-			console.log('[SyncService] Sync completed successfully. Total synced:', syncedCount);
-			new Notice(`同步完成: 共${syncedCount}个项目，新增${newCount}个，跳过${skippedCount}个`);
+			console.debug('[SyncService] Sync completed successfully. Total synced:', syncedCount);
+			new Notice(`同步完成：共 ${syncedCount} 个书签，新增 ${newCount} 个，跳过 ${skippedCount} 个`);
 			return syncedCount;
 		} catch (error) {
 			console.error('[SyncService] Sync error:', error);
-			new Notice(`同步失败: ${error.message}`);
+			const errorMessage = error instanceof Error ? error.message : '未知错误';
+			new Notice(`同步失败：${errorMessage}`);
 			throw error;
 		}
 	}
@@ -78,13 +77,13 @@ export class SyncService {
 	private async createOrUpdateBookmark(bookmark: PinboxBookmark): Promise<'created' | 'skipped'> {
 		const fileName = this.sanitizeFileName(bookmark.title || String(bookmark.id));
 		const filePath = normalizePath(`${this.syncFolder}/${fileName}.md`);
-		console.log(`[SyncService] Processing file: ${filePath}`);
+		console.debug(`[SyncService] Processing file: ${filePath}`);
 
 		const existingFile = this.app.vault.getAbstractFileByPath(filePath);
 
 		if (existingFile instanceof TFile) {
 			// Skip existing file (don't update)
-			console.log(`[SyncService] Skipping existing file: ${filePath}`);
+			console.debug(`[SyncService] Skipping existing file: ${filePath}`);
 			return 'skipped';
 		} else {
 			// Fetch web content if URL exists
@@ -97,7 +96,7 @@ export class SyncService {
 			const content = this.generateMarkdownContent(bookmark, webContent);
 
 			// Create new file
-			console.log(`[SyncService] Creating new file: ${filePath}`);
+			console.debug(`[SyncService] Creating new file: ${filePath}`);
 			await this.app.vault.create(filePath, content);
 			return 'created';
 		}
@@ -113,11 +112,11 @@ export class SyncService {
 	}
 
 	private async fetchWebContent(url: string, retries: number = 3): Promise<string | null> {
-		let lastError: any = null;
+		let lastError: Error | null = null;
 
 		for (let attempt = 1; attempt <= retries; attempt++) {
 			try {
-				console.log(`[SyncService] Fetching web content from: ${url} (attempt ${attempt}/${retries})`);
+				console.debug(`[SyncService] Fetching web content from: ${url} (attempt ${attempt}/${retries})`);
 
 				const response = await requestUrl({
 					url,
@@ -138,7 +137,7 @@ export class SyncService {
 					if (response.status >= 500 || response.status === 429 || response.status === 408) {
 						if (attempt < retries) {
 							const delay = attempt * 1000; // Exponential backoff: 1s, 2s, 3s
-							console.log(`[SyncService] Retrying after ${delay}ms...`);
+							console.debug(`[SyncService] Retrying after ${delay}ms...`);
 							await new Promise(resolve => setTimeout(resolve, delay));
 							continue;
 						}
@@ -149,16 +148,16 @@ export class SyncService {
 				const html = response.text;
 				const markdown = this.htmlToMarkdown(html);
 
-				console.log(`[SyncService] Successfully fetched web content (${markdown.length} characters)`);
+				console.debug(`[SyncService] Successfully fetched web content (${markdown.length} characters)`);
 				return markdown;
 			} catch (error) {
 				console.error(`[SyncService] Error fetching web content (attempt ${attempt}/${retries}):`, error);
-				lastError = error;
+				lastError = error as Error;
 
 				// Retry on network errors
 				if (attempt < retries) {
 					const delay = attempt * 1000; // Exponential backoff: 1s, 2s, 3s
-					console.log(`[SyncService] Retrying after ${delay}ms...`);
+					console.debug(`[SyncService] Retrying after ${delay}ms...`);
 					await new Promise(resolve => setTimeout(resolve, delay));
 					continue;
 				}
@@ -220,11 +219,12 @@ export class SyncService {
 			// Add custom rule for images with better handling
 			turndownService.addRule('images', {
 				filter: 'img',
-				replacement: function(content: string, node: any) {
-					const alt = node.getAttribute('alt') || 'image';
-					const src = node.getAttribute('src') ||
-					           node.getAttribute('data-src') ||
-					           node.getAttribute('data-original') || '';
+				replacement: function(content: string, node: Node) {
+					const element = node as HTMLImageElement;
+					const alt = element.getAttribute('alt') || 'image';
+					const src = element.getAttribute('src') ||
+					           element.getAttribute('data-src') ||
+					           element.getAttribute('data-original') || '';
 
 					if (!src) return '';
 

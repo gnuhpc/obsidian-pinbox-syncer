@@ -11,7 +11,7 @@ export class CallbackHandler {
 			// Open login page in system browser
 			window.open('https://withpinbox.com/login', '_blank');
 
-			new Notice('请在浏览器中完成登录，然后返回此窗口', 10000);
+			new Notice('请在浏览器中完成微信扫码登录，然后返回此窗口', 10000);
 
 			// Since we can't intercept the browser callback in Obsidian,
 			// we'll provide instructions for manual token extraction
@@ -64,8 +64,11 @@ export class CallbackHandler {
 	static tryExtractTokenFromBrowser(): string | null {
 		try {
 			// Try localStorage
+			// eslint-disable-next-line no-restricted-globals
 			const localStorageToken = localStorage.getItem('token') ||
+			// eslint-disable-next-line no-restricted-globals
 									  localStorage.getItem('access_token') ||
+			// eslint-disable-next-line no-restricted-globals
 									  localStorage.getItem('pinbox_token');
 
 			if (localStorageToken) {

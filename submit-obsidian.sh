@@ -1,7 +1,43 @@
 #!/bin/bash
 
+# ==============================================================================
 # Obsidian Plugin Submission Script
-# This script automates the submission process to Obsidian's community plugin list
+# ==============================================================================
+#
+# Purpose: Submit plugin to Obsidian community plugin marketplace
+#
+# Use this script when:
+# - You have already created a GitHub release
+# - Ready to submit plugin for review by Obsidian team
+# - First-time submission to community plugins
+#
+# What this script does:
+# 1. Forks obsidianmd/obsidian-releases repository (if not exists)
+# 2. Clones your fork to temporary directory
+# 3. Creates feature branch (add-{plugin-id})
+# 4. Adds plugin entry to community-plugins.json
+# 5. Commits changes with proper message
+# 6. Pushes to your fork
+# 7. Creates Pull Request to obsidianmd/obsidian-releases
+# 8. Provides PR URL for tracking
+#
+# Prerequisites:
+# - GitHub CLI (gh) installed and authenticated
+# - Plugin already released on GitHub with:
+#   - main.js
+#   - manifest.json
+#   - styles.css
+# - manifest.json exists in current directory
+#
+# Usage:
+#   ./submit-obsidian.sh
+#
+# After running:
+# - Monitor the PR for comments from Obsidian team
+# - Respond to any feedback
+# - Review typically takes 1-2 weeks
+#
+# ==============================================================================
 
 set -e  # Exit on error
 

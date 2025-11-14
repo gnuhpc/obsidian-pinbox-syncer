@@ -1,6 +1,13 @@
+/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import PinboxSyncerPlugin from '../main';
 import { PinboxAuthModal } from './authModal';
+
+interface AppWithPlugins {
+	plugins: {
+		plugins: Record<string, unknown>;
+	};
+}
 
 export class PinboxSettingTab extends PluginSettingTab {
 	plugin: PinboxSyncerPlugin;
@@ -15,10 +22,10 @@ export class PinboxSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'Pinbox 同步器设置' });
+		new Setting(containerEl).setName("Pinbox 同步器设置").setHeading();
 
 		// Authentication section
-		containerEl.createEl('h3', { text: '账户认证' });
+		new Setting(containerEl).setName("账户认证").setHeading();
 
 		// Check if user is logged in
 		const isLoggedIn = this.plugin.settings.accessToken && this.plugin.settings.accessToken.length > 0;
@@ -30,16 +37,18 @@ export class PinboxSettingTab extends PluginSettingTab {
 				.setButtonText(isLoggedIn ? '重新登录' : '登录')
 				.setCta()
 				.onClick(() => {
-					new PinboxAuthModal(this.app, async (token) => {
-						this.plugin.settings.accessToken = token;
-						await this.plugin.saveSettings();
-						this.plugin.updateAPIToken(token);
-						this.display(); // Refresh settings display
+					new PinboxAuthModal(this.app, (token) => {
+						void (async () => {
+							this.plugin.settings.accessToken = token;
+							await this.plugin.saveSettings();
+							this.plugin.updateAPIToken(token);
+							this.display(); // Refresh settings display
+						})();
 					}).open();
 				}));
 
 		// Sync settings
-		containerEl.createEl('h3', { text: '同步设置' });
+		new Setting(containerEl).setName("同步设置").setHeading();
 
 		new Setting(containerEl)
 			.setName('同步文件夹')
@@ -103,21 +112,23 @@ export class PinboxSettingTab extends PluginSettingTab {
 				}));
 
 		// Dataview Index settings
-		containerEl.createEl('h3', { text: 'Dataview 索引设置' });
+		new Setting(containerEl).setName("Dataview 索引设置").setHeading();
 
 		// Check if Dataview plugin is installed
-		const dataviewPlugin = (this.app as any).plugins.plugins['dataview'];
+		const dataviewPlugin = (this.app as unknown as AppWithPlugins).plugins.plugins['dataview'];
 		const isDataviewInstalled = !!dataviewPlugin;
 
 		if (!isDataviewInstalled) {
 			const warningDiv = containerEl.createDiv();
-			warningDiv.style.cssText = 'padding: 10px; background: var(--background-secondary); border-left: 3px solid var(--text-warning); margin-bottom: 15px; border-radius: 4px;';
-			warningDiv.createEl('p', {
+			warningDiv.addClass('pinbox-warning');
+			const titleEl = warningDiv.createEl('p', {
 				text: '⚠️ 未检测到 Dataview 插件'
-			}).style.cssText = 'margin: 0 0 5px 0; font-weight: bold; color: var(--text-warning);';
-			warningDiv.createEl('p', {
+			});
+			titleEl.addClass('pinbox-warning-title');
+			const descEl = warningDiv.createEl('p', {
 				text: '请先安装并启用 Dataview 插件才能使用索引功能。'
-			}).style.cssText = 'margin: 0; font-size: 0.9em;';
+			});
+			descEl.addClass('pinbox-warning-desc');
 		}
 
 		new Setting(containerEl)

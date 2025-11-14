@@ -28,12 +28,13 @@ Before running the deployment scripts, ensure you have:
 Run a single command to push, release, and prepare for Obsidian submission:
 
 ```bash
-./deploy.sh
+./release.sh
 ```
 
 This script will:
+- ✓ Automatically detect first deployment or update
 - ✓ Verify pre-built files exist (main.js, manifest.json, styles.css)
-- ✓ Initialize git repository
+- ✓ Sync with remote repository if exists (preserves history)
 - ✓ Push code to GitHub
 - ✓ Create a release with tag
 - ✓ Upload release files
@@ -44,7 +45,7 @@ This script will:
 #### Step 1: Build and Deploy to GitHub
 
 ```bash
-./deploy.sh
+./release.sh
 ```
 
 #### Step 2: Submit to Obsidian Community Plugins
@@ -63,10 +64,12 @@ This will:
 
 ## What These Scripts Do
 
-### deploy.sh
+### release.sh
+- ✓ Automatically detects first deployment or update
 - ✓ Verifies pre-built files exist (main.js, manifest.json, styles.css)
 - ✓ Initializes git if needed
-- ✓ Commits all changes
+- ✓ Fetches and preserves remote history (doesn't overwrite new files)
+- ✓ Commits new changes (if any)
 - ✓ Pushes to GitHub (git@github.com:gnuhpc/obsidian-pinbox-syncer.git)
 - ✓ Creates and pushes a version tag
 - ✓ Creates a GitHub release with built files
@@ -108,7 +111,7 @@ If git push fails with SSH errors:
 
 ### Missing Built Files
 
-If deploy.sh complains about missing main.js:
+If release.sh complains about missing main.js:
 
 1. This package should already contain main.js (pre-built)
 2. Check if main.js exists:
@@ -127,21 +130,27 @@ If deploy.sh complains about missing main.js:
 ### Manual GitHub Push
 
 ```bash
+# If not initialized yet
 git init
 git add .
-git commit -m "Initial release"
+git commit -m "Release version"
 git branch -M main
 git remote add origin git@github.com:gnuhpc/obsidian-pinbox-syncer.git
+
+# If already initialized, just push
+git fetch origin
+git merge origin/main --no-edit  # Merge existing commits
 git push -u origin main
 
-# Create and push tag
-git tag -a 1.0.0 -m "Release 1.0.0"
-git push origin 1.0.0
+# Create and push tag (replace VERSION with your version number)
+VERSION=$(node -p "require('./manifest.json').version")
+git tag -a $VERSION -m "Release $VERSION"
+git push origin $VERSION
 
 # Create release
-gh release create 1.0.0 \
-  --title "Pinbox Syncer 1.0.0" \
-  --notes "Initial release" \
+gh release create $VERSION \
+  --title "Pinbox Syncer $VERSION" \
+  --notes "Release $VERSION" \
   main.js manifest.json styles.css
 ```
 

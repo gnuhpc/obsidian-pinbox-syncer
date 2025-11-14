@@ -1,11 +1,37 @@
 import { requestUrl, RequestUrlParam } from 'obsidian';
 
+interface JWTPayload {
+	aud?: string;
+	[key: string]: unknown;
+}
+
+interface CollectionItemsResponse {
+	items: PinboxBookmark[];
+	items_count: number;
+}
+
+interface SessionCheckResponse {
+	status?: string;
+	token?: string;
+	access_token?: string;
+	accessToken?: string;
+	data?: {
+		token?: string;
+		access_token?: string;
+	};
+}
+
+export interface PinboxTag {
+	name: string;
+	[key: string]: unknown;
+}
+
 export interface PinboxBookmark {
 	id: number;
 	title: string;
 	url: string;
 	description: string;
-	tags: any[];
+	tags: (string | PinboxTag)[];
 	created_at: string;
 	item_type: string;
 	brief?: string;
@@ -33,18 +59,18 @@ export class PinboxAPI {
 
 	constructor(accessToken: string) {
 		this.accessToken = accessToken;
-		console.log('[PinboxAPI] Initialized with token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'empty');
+		console.debug('[PinboxAPI] Initialized with token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'empty');
 	}
 
 	setAccessToken(token: string) {
-		console.log('[PinboxAPI] Setting new token:', token ? `${token.substring(0, 20)}...` : 'empty');
+		console.debug('[PinboxAPI] Setting new token:', token ? `${token.substring(0, 20)}...` : 'empty');
 		this.accessToken = token;
 		this.userId = null; // Reset user ID when token changes
 	}
 
 	private extractUserIdFromToken(): string | null {
 		if (!this.accessToken) {
-			console.log('[PinboxAPI] No token available to extract user ID');
+			console.debug('[PinboxAPI] No token available to extract user ID');
 			return null;
 		}
 
@@ -52,17 +78,17 @@ export class PinboxAPI {
 			// JWT token format: header.payload.signature
 			const parts = this.accessToken.split('.');
 			if (parts.length !== 3) {
-				console.log('[PinboxAPI] Invalid JWT token format');
+				console.debug('[PinboxAPI] Invalid JWT token format');
 				return null;
 			}
 
 			// Decode payload (base64)
-			const payload = JSON.parse(atob(parts[1]));
-			console.log('[PinboxAPI] Decoded JWT payload:', payload);
+			const payload = JSON.parse(atob(parts[1])) as JWTPayload;
+			console.debug('[PinboxAPI] Decoded JWT payload:', payload);
 
 			// The "aud" field contains the user ID
 			if (payload.aud) {
-				console.log('[PinboxAPI] Extracted user ID from token:', payload.aud);
+				console.debug('[PinboxAPI] Extracted user ID from token:', payload.aud);
 				return payload.aud;
 			}
 		} catch (error) {
@@ -86,11 +112,11 @@ export class PinboxAPI {
 	}
 
 	async getCollections(): Promise<PinboxCollection[]> {
-		console.log('[PinboxAPI] Fetching collections...');
+		console.debug('[PinboxAPI] Fetching collections...');
 		try {
 			const userId = await this.getUserId();
 			const url = `${this.baseUrl}/api/user/${userId}/collection?order=default&sort=asc`;
-			console.log('[PinboxAPI] Collections URL:', url);
+			console.debug('[PinboxAPI] Collections URL:', url);
 
 			const params: RequestUrlParam = {
 				url: url,
@@ -103,12 +129,12 @@ export class PinboxAPI {
 			};
 
 			const response = await requestUrl(params);
-			console.log('[PinboxAPI] Collections response status:', response.status);
-			console.log('[PinboxAPI] Collections response:', response.json);
+			console.debug('[PinboxAPI] Collections response status:', response.status);
+			console.debug('[PinboxAPI] Collections response:', response.json);
 
 			if (response.status === 200) {
-				const collections = Array.isArray(response.json) ? response.json : [];
-				console.log(`[PinboxAPI] Found ${collections.length} collections`);
+				const collections = Array.isArray(response.json) ? response.json as PinboxCollection[] : [];
+				console.debug(`[PinboxAPI] Found ${collections.length} collections`);
 				return collections;
 			} else {
 				throw new Error(`Failed to fetch collections: ${response.status}`);
@@ -120,11 +146,11 @@ export class PinboxAPI {
 	}
 
 	async getCollectionItems(collectionId: number | string, count = 50, offset = 0): Promise<{ items: PinboxBookmark[], total: number }> {
-		console.log(`[PinboxAPI] Fetching items from collection ${collectionId} (offset: ${offset}, count: ${count})...`);
+		console.debug(`[PinboxAPI] Fetching items from collection ${collectionId} (offset: ${offset}, count: ${count})...`);
 		try {
 			const userId = await this.getUserId();
 			const url = `${this.baseUrl}/api/user/${userId}/collection/${collectionId}/item?count=${count}&offset=${offset}&category=all&order=create&sort=desc`;
-			console.log('[PinboxAPI] Collection items URL:', url);
+			console.debug('[PinboxAPI] Collection items URL:', url);
 
 			const params: RequestUrlParam = {
 				url: url,
@@ -137,13 +163,13 @@ export class PinboxAPI {
 			};
 
 			const response = await requestUrl(params);
-			console.log(`[PinboxAPI] Collection ${collectionId} response status:`, response.status);
+			console.debug(`[PinboxAPI] Collection ${collectionId} response status:`, response.status);
 
 			if (response.status === 200) {
-				const data = response.json;
+				const data = response.json as CollectionItemsResponse;
 				const items = data.items || [];
 				const total = data.items_count || 0;
-				console.log(`[PinboxAPI] Found ${items.length} items in collection ${collectionId}, total count: ${total}`);
+				console.debug(`[PinboxAPI] Found ${items.length} items in collection ${collectionId}, total count: ${total}`);
 				return { items, total };
 			} else {
 				throw new Error(`Failed to fetch collection items: ${response.status}`);
@@ -155,7 +181,7 @@ export class PinboxAPI {
 	}
 
 	async getAllCollectionItems(collectionId: number | string): Promise<PinboxBookmark[]> {
-		console.log(`[PinboxAPI] Fetching all items from collection ${collectionId}...`);
+		console.debug(`[PinboxAPI] Fetching all items from collection ${collectionId}...`);
 		let allItems: PinboxBookmark[] = [];
 		let offset = 0;
 		const pageSize = 50;
@@ -166,18 +192,18 @@ export class PinboxAPI {
 			allItems = allItems.concat(firstPage.items);
 			const total = firstPage.total;
 
-			console.log(`[PinboxAPI] Collection ${collectionId} has ${total} total items`);
+			console.debug(`[PinboxAPI] Collection ${collectionId} has ${total} total items`);
 
 			// Fetch remaining pages
 			offset += pageSize;
 			while (offset < total) {
-				console.log(`[PinboxAPI] Fetching page at offset ${offset}...`);
+				console.debug(`[PinboxAPI] Fetching page at offset ${offset}...`);
 				const page = await this.getCollectionItems(collectionId, pageSize, offset);
 				allItems = allItems.concat(page.items);
 				offset += pageSize;
 			}
 
-			console.log(`[PinboxAPI] Fetched all ${allItems.length} items from collection ${collectionId}`);
+			console.debug(`[PinboxAPI] Fetched all ${allItems.length} items from collection ${collectionId}`);
 			return allItems;
 		} catch (error) {
 			console.error(`[PinboxAPI] Error fetching all items from collection ${collectionId}:`, error);
@@ -186,34 +212,34 @@ export class PinboxAPI {
 	}
 
 	async getAllBookmarks(): Promise<PinboxBookmark[]> {
-		console.log('[PinboxAPI] Starting to fetch all bookmarks...');
+		console.debug('[PinboxAPI] Starting to fetch all bookmarks...');
 		let allBookmarks: PinboxBookmark[] = [];
 
 		try {
 			// First, get all collections
 			const collections = await this.getCollections();
-			console.log(`[PinboxAPI] Will fetch items from ${collections.length + 1} collections (including default)`);
+			console.debug(`[PinboxAPI] Will fetch items from ${collections.length + 1} collections (including default)`);
 
 			// Get items from default collection (id = 0)
-			console.log('[PinboxAPI] Fetching items from default collection (id=0)...');
+			console.debug('[PinboxAPI] Fetching items from default collection (id=0)...');
 			const defaultItems = await this.getAllCollectionItems(0);
 			allBookmarks = allBookmarks.concat(defaultItems);
-			console.log(`[PinboxAPI] Total bookmarks so far: ${allBookmarks.length}`);
+			console.debug(`[PinboxAPI] Total bookmarks so far: ${allBookmarks.length}`);
 
 			// Get items from each collection
 			for (const collection of collections) {
-				console.log(`[PinboxAPI] Fetching items from collection: ${collection.name} (id=${collection.id}, expected ${collection.items_count} items)...`);
+				console.debug(`[PinboxAPI] Fetching items from collection: ${collection.name} (id=${collection.id}, expected ${collection.items_count} items)...`);
 				try {
 					const items = await this.getAllCollectionItems(collection.id);
 					allBookmarks = allBookmarks.concat(items);
-					console.log(`[PinboxAPI] Total bookmarks so far: ${allBookmarks.length}`);
+					console.debug(`[PinboxAPI] Total bookmarks so far: ${allBookmarks.length}`);
 				} catch (error) {
 					console.error(`[PinboxAPI] Error fetching collection ${collection.id} (${collection.name}):`, error);
 					// Continue with next collection
 				}
 			}
 
-			console.log(`[PinboxAPI] Finished fetching all bookmarks. Total: ${allBookmarks.length}`);
+			console.debug(`[PinboxAPI] Finished fetching all bookmarks. Total: ${allBookmarks.length}`);
 			return allBookmarks;
 		} catch (error) {
 			console.error('[PinboxAPI] Error in getAllBookmarks:', error);
@@ -222,14 +248,14 @@ export class PinboxAPI {
 	}
 
 	async testConnection(): Promise<boolean> {
-		console.log('[PinboxAPI] Testing connection...');
+		console.debug('[PinboxAPI] Testing connection...');
 		try {
 			const userId = await this.getUserId();
-			console.log('[PinboxAPI] Testing with user ID:', userId);
+			console.debug('[PinboxAPI] Testing with user ID:', userId);
 
 			// Test by fetching collections (lightweight request)
 			const collections = await this.getCollections();
-			console.log('[PinboxAPI] Connection test successful, found', collections.length, 'collections');
+			console.debug('[PinboxAPI] Connection test successful, found', collections.length, 'collections');
 			return true;
 		} catch (error) {
 			console.error('[PinboxAPI] Connection test failed:', error);
@@ -238,12 +264,12 @@ export class PinboxAPI {
 	}
 
 	async deleteItem(itemId: number | string): Promise<boolean> {
-		console.log(`[PinboxAPI] Deleting item ${itemId}...`);
+		console.debug(`[PinboxAPI] Deleting item ${itemId}...`);
 		try {
 			const userId = await this.getUserId();
 			const url = `${this.baseUrl}/api/user/${userId}/store?storeIds[]=${itemId}`;
-			console.log('[PinboxAPI] Delete URL:', url);
-			console.log('[PinboxAPI] Access Token:', this.accessToken ? `${this.accessToken.substring(0, 20)}...` : 'empty');
+			console.debug('[PinboxAPI] Delete URL:', url);
+			console.debug('[PinboxAPI] Access Token:', this.accessToken ? `${this.accessToken.substring(0, 20)}...` : 'empty');
 
 			const params: RequestUrlParam = {
 				url: url,
@@ -257,13 +283,13 @@ export class PinboxAPI {
 				throw: false
 			};
 
-			console.log('[PinboxAPI] Sending DELETE request...');
+			console.debug('[PinboxAPI] Sending DELETE request...');
 			const response = await requestUrl(params);
-			console.log(`[PinboxAPI] Delete item ${itemId} response status:`, response.status);
-			console.log(`[PinboxAPI] Delete item ${itemId} response:`, response);
+			console.debug(`[PinboxAPI] Delete item ${itemId} response status:`, response.status);
+			console.debug(`[PinboxAPI] Delete item ${itemId} response:`, response);
 
 			if (response.status === 200 || response.status === 204) {
-				console.log(`[PinboxAPI] Successfully deleted item ${itemId}`);
+				console.debug(`[PinboxAPI] Successfully deleted item ${itemId}`);
 				return true;
 			} else {
 				console.error(`[PinboxAPI] Failed to delete item ${itemId}:`, response.status, response.text);
@@ -277,7 +303,7 @@ export class PinboxAPI {
 	}
 
 	async getTokenBySession(sessionId: string): Promise<string | null> {
-		console.log(`[PinboxAPI] Checking session status for: ${sessionId}`);
+		console.debug(`[PinboxAPI] Checking session status for: ${sessionId}`);
 
 		// Try multiple possible endpoints
 		const possibleEndpoints = [
@@ -297,27 +323,28 @@ export class PinboxAPI {
 					}
 				};
 
-				console.log('[PinboxAPI] Trying session check URL:', endpoint);
+				console.debug('[PinboxAPI] Trying session check URL:', endpoint);
 				const response = await requestUrl(params);
-				console.log('[PinboxAPI] Session check response status:', response.status);
-				console.log('[PinboxAPI] Session check response data:', response.json);
+				console.debug('[PinboxAPI] Session check response status:', response.status);
+				console.debug('[PinboxAPI] Session check response data:', response.json);
 
 				if (response.status === 200 && response.json) {
-					const data = response.json;
+					const data = response.json as SessionCheckResponse;
 					// Check if login is completed and token is available
 					if (data.status === 'completed' || data.status === 'success' || data.token || data.access_token) {
 						const token = data.token || data.access_token || data.accessToken || data.data?.token || data.data?.access_token;
 						if (token) {
-							console.log('[PinboxAPI] Token found in session response:', token.substring(0, 20) + '...');
+							console.debug('[PinboxAPI] Token found in session response:', token.substring(0, 20) + '...');
 							return token;
 						}
 					} else {
-						console.log('[PinboxAPI] Session status:', data.status || 'pending');
+						console.debug('[PinboxAPI] Session status:', data.status || 'pending');
 					}
 				}
 			} catch (error) {
 				// If 404 or other error, try next endpoint
-				console.log(`[PinboxAPI] Endpoint ${endpoint} check failed (expected during polling):`, error.message);
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				console.debug(`[PinboxAPI] Endpoint ${endpoint} check failed (expected during polling):`, errorMessage);
 			}
 		}
 
@@ -325,9 +352,9 @@ export class PinboxAPI {
 	}
 
 	async exchangeCodeForToken(code: string, state: string): Promise<string | null> {
-		console.log('[PinboxAPI] Exchanging code for token');
-		console.log('[PinboxAPI] Code:', code);
-		console.log('[PinboxAPI] State:', state);
+		console.debug('[PinboxAPI] Exchanging code for token');
+		console.debug('[PinboxAPI] Code:', code);
+		console.debug('[PinboxAPI] State:', state);
 
 		try {
 			// Try different possible API endpoints
@@ -339,7 +366,7 @@ export class PinboxAPI {
 
 			for (const endpoint of possibleEndpoints) {
 				try {
-					console.log('[PinboxAPI] Trying endpoint:', endpoint);
+					console.debug('[PinboxAPI] Trying endpoint:', endpoint);
 
 					const params: RequestUrlParam = {
 						url: endpoint,
@@ -355,20 +382,21 @@ export class PinboxAPI {
 					};
 
 					const response = await requestUrl(params);
-					console.log('[PinboxAPI] Token exchange response status:', response.status);
-					console.log('[PinboxAPI] Token exchange response:', response.json);
+					console.debug('[PinboxAPI] Token exchange response status:', response.status);
+					console.debug('[PinboxAPI] Token exchange response:', response.json);
 
 					if (response.status === 200 && response.json) {
-						const data = response.json;
+						const data = response.json as SessionCheckResponse;
 						const token = data.token || data.access_token || data.accessToken || data.data?.token || data.data?.access_token;
 
 						if (token) {
-							console.log('[PinboxAPI] Token found:', token.substring(0, 20) + '...');
+							console.debug('[PinboxAPI] Token found:', token.substring(0, 20) + '...');
 							return token;
 						}
 					}
 				} catch (error) {
-					console.log(`[PinboxAPI] Endpoint ${endpoint} failed:`, error.message);
+					const errorMessage = error instanceof Error ? error.message : String(error);
+					console.debug(`[PinboxAPI] Endpoint ${endpoint} failed:`, errorMessage);
 					// Continue to next endpoint
 				}
 			}

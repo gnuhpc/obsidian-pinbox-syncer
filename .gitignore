@@ -10,5 +10,20 @@ data.json
 main.js
 *.js.map
 
+# Deployment scripts and documentation
+*.sh
+DEPLOYMENT.md
+DEPLOYMENT_README.md
+SCRIPTS_GUIDE.md
+DEPLOY_INSTRUCTIONS.md
+obsidian-pinbox-syncer-release-*.tar.gz
+*.sha256
+
+# ESLint plugin temp files
+eslint-plugin/
+
+# Claude Code local settings
+.claude/
+
 # Misc
 .DS_Store

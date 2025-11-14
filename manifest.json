@@ -1,7 +1,7 @@
 {
   "id": "pinbox-syncer",
   "name": "Pinbox Syncer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "0.15.0",
   "description": "Sync your Pinbox bookmarks to your vault.",
   "author": "gnuhpc",
