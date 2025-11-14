@@ -33,9 +33,12 @@
 
 ### 📝 内容抓取
 - **网页内容抓取**: 自动抓取书签对应的网页内容并转换为 Markdown
-- **图片保留**: 完整保留网页中的图片
+- **图片保留**: 完整保留网页中的图片，支持懒加载图片
 - **智能清理**: 自动移除脚本、样式和微信公众号文章的固定 footer
 - **重试机制**: 对不稳定的网络请求进行最多 3 次重试
+- **加载检测**: 智能检测 "loading..." 占位符，自动重试直到获取真实内容
+- **微信优化**: 自动将 HTTP 协议的微信链接升级为 HTTPS，避免被浏览器拦截
+- **格式优化**: 自动清理多余空行，优化列表和段落间距
 
 ### 🔐 安全登录
 - **独立窗口登录**: 使用 Electron 窗口进行微信扫码登录
@@ -49,9 +52,11 @@
 - **统计信息**: 显示书签总数、标签数、浏览量等统计数据
 
 ### 🗑️ 书签管理
-- **一键删除**: 在笔记标题旁显示删除按钮
+- **精美图标**: 标题右侧显示垃圾桶图标按钮，悬停时高亮
+- **智能加载**: 使用重试机制确保按钮在视图准备好后显示
 - **双向删除**: 同时删除云端书签和本地笔记
-- **安全确认**: 删除前显示详细的确认对话框
+- **安全确认**: 删除前显示详细的中文确认对话框
+- **中文界面**: 所有通知和提示均使用中文
 
 ## 📦 安装
 
@@ -152,9 +157,15 @@ cp main.js manifest.json styles.css <your-vault>/.obsidian/plugins/pinbox-syncer
 
 #### 删除书签
 1. 打开任何同步的 Pinbox 书签笔记
-2. 点击标题旁的"🗑️ 删除"按钮
-3. 确认删除操作
-4. 插件会同时删除云端书签和本地笔记
+2. 点击标题右侧的垃圾桶图标按钮
+3. 在弹出的确认对话框中查看删除警告
+4. 点击"确认删除"按钮
+5. 插件会显示进度通知并同时删除云端书签和本地笔记
+
+**提示**:
+- 删除按钮默认为灰色，鼠标悬停时变为红色
+- 删除操作不可撤销，请谨慎操作
+- 所有界面和通知均为中文
 
 #### 查看索引
 如果启用了 Dataview 索引，打开索引文件即可查看所有书签的表格和统计信息
@@ -223,6 +234,35 @@ synced_at: 2025-01-13T10:00:00.000Z
 
 ## 👨‍💻 开发
 
+### 项目结构
+
+```
+obsidian-pinbox-syncer/
+├── src/
+│   ├── styles/          # 样式文件（模块化）
+│   │   ├── index.css    # 样式入口
+│   │   ├── layout.css   # 布局样式
+│   │   ├── components.css  # 组件样式
+│   │   ├── modals.css   # 模态框样式
+│   │   └── README.md    # 样式文档
+│   ├── authModal.ts     # 认证模态框
+│   ├── callbackServer.ts # OAuth 回调服务器
+│   ├── oauthServer.ts   # OAuth 服务器
+│   ├── pinboxApi.ts     # Pinbox API 客户端
+│   ├── pinboxLoginWindow.ts # 登录窗口
+│   ├── settings.ts      # 设置定义
+│   ├── settingsTab.ts   # 设置界面
+│   └── syncService.ts   # 同步服务
+├── main.ts              # 插件主文件
+├── styles.css           # 编译后的样式（自动生成）
+├── manifest.json        # 插件清单
+├── esbuild.config.mjs   # esbuild 配置
+├── build-styles.mjs     # 样式构建脚本
+└── package.json         # 项目配置
+```
+
+### 开发命令
+
 ```bash
 # 安装依赖
 npm install
@@ -230,9 +270,45 @@ npm install
 # 开发模式（监听文件变化）
 npm run dev
 
-# 构建
+# 构建所有文件
 npm run build
+
+# 仅构建样式
+npm run build:styles
+
+# 代码检查
+npx eslint .
+
+# 代码检查并自动修复
+npx eslint . --fix
 ```
+
+### 样式开发
+
+样式文件采用模块化组织，位于 `src/styles/` 目录:
+
+- **开发时**: 编辑 `src/styles/` 中的各个 CSS 模块
+- **构建时**: 运行 `npm run build:styles` 自动合并为 `styles.css`
+- **生产时**: Obsidian 加载根目录的 `styles.css`
+
+详细说明请参考 [src/styles/README.md](src/styles/README.md)
+
+### 代码规范
+
+项目使用 ESLint 进行代码质量检查:
+
+- 遵循 Obsidian 插件最佳实践
+- 使用 TypeScript 严格模式
+- 避免使用 `innerHTML` 等不安全的 DOM 操作
+- 所有用户界面文本使用中文
+
+### 发布流程
+
+1. 更新版本号（`manifest.json` 和 `package.json`）
+2. 运行完整构建: `npm run build`
+3. 测试所有功能
+4. 创建 Git tag 并推送
+5. GitHub Actions 自动创建 Release
 
 ## 📝 许可证
 

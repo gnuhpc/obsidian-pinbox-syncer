@@ -1,4 +1,3 @@
-/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, Notice, TFile, normalizePath, requestUrl } from 'obsidian';
 import { PinboxAPI, PinboxBookmark } from './pinboxApi';
 import TurndownService from 'turndown';
@@ -21,6 +20,7 @@ export class SyncService {
 	async sync(): Promise<number> {
 		console.debug('[SyncService] Starting sync process...');
 		try {
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 			new Notice('开始同步 Pinbox 书签...');
 
 			// Ensure sync folder exists
@@ -114,23 +114,48 @@ export class SyncService {
 	private async fetchWebContent(url: string, retries: number = 3): Promise<string | null> {
 		let lastError: Error | null = null;
 
+		// Upgrade HTTP to HTTPS for WeChat articles to avoid ERR_BLOCKED_BY_CLIENT
+		if (url.startsWith('http://mp.weixin.qq.com')) {
+			url = url.replace('http://', 'https://');
+			console.debug(`[SyncService] Upgraded WeChat URL to HTTPS: ${url}`);
+		}
+
 		for (let attempt = 1; attempt <= retries; attempt++) {
 			try {
 				console.debug(`[SyncService] Fetching web content from: ${url} (attempt ${attempt}/${retries})`);
 
+				// Special headers for WeChat articles
+				const isWechatArticle = url.includes('mp.weixin.qq.com');
+				const headers: Record<string, string> = {
+					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+					'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+					'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+					'Accept-Encoding': 'gzip, deflate, br',
+					'Cache-Control': 'no-cache',
+					'Pragma': 'no-cache',
+				};
+
+				if (isWechatArticle) {
+					// Add WeChat-specific headers
+					headers['Referer'] = 'https://mp.weixin.qq.com/';
+					headers['Sec-Fetch-Dest'] = 'document';
+					headers['Sec-Fetch-Mode'] = 'navigate';
+					headers['Sec-Fetch-Site'] = 'none';
+					headers['Upgrade-Insecure-Requests'] = '1';
+				}
+
 				const response = await requestUrl({
 					url,
 					method: 'GET',
-					headers: {
-						'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-						'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-						'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-					},
+					headers,
 					throw: false
 				});
 
 				if (response.status !== 200) {
 					console.error(`[SyncService] Failed to fetch web content: HTTP ${response.status}`);
+					console.error(`[SyncService] URL:`, url);
+					console.error(`[SyncService] Response headers:`, response.headers);
+					console.error(`[SyncService] Response body preview:`, response.text?.substring(0, 500));
 					lastError = new Error(`HTTP ${response.status}`);
 
 					// Retry on server errors (5xx) or specific client errors
@@ -146,7 +171,72 @@ export class SyncService {
 				}
 
 				const html = response.text;
+				console.debug(`[SyncService] Response received, HTML length: ${html?.length || 0} bytes`);
+
+				// Check if we got valid HTML content
+				if (!html || html.trim().length === 0) {
+					console.error(`[SyncService] Empty response body`);
+					lastError = new Error('Empty response');
+					return null;
+				}
+
+				// Check for WeChat error pages
+				if (isWechatArticle && (html.includes('该内容已被发布者删除') || html.includes('链接已过期') || html.includes('此内容因违规无法查看'))) {
+					console.error(`[SyncService] WeChat article is not accessible (deleted, expired, or blocked)`);
+					lastError = new Error('WeChat article not accessible');
+					return null;
+				}
+
+				console.debug(`[SyncService] Converting HTML to markdown...`);
 				const markdown = this.htmlToMarkdown(html);
+				console.debug(`[SyncService] Conversion complete, markdown length: ${markdown.length} characters`);
+
+				// Check if we got a meaningful content or just loading placeholders
+				const loadingIndicators = [
+					'loading...',
+					'loading',
+					'加载中...',
+					'加载中',
+					'请稍候...',
+					'正在加载',
+					'load more',
+					'skeleton',
+				];
+
+				const markdownLower = markdown.toLowerCase().trim();
+				const contentLength = markdown.replace(/\s+/g, '').length;
+
+				console.debug(`[SyncService] Content length (without whitespace): ${contentLength}`);
+
+				// If content is suspiciously short or contains only loading indicators
+				if (contentLength < 100) {
+					console.warn(`[SyncService] Content is very short (${contentLength} chars)`);
+					console.warn(`[SyncService] Full markdown content:`, markdown);
+
+					const hasLoadingIndicator = loadingIndicators.some(indicator =>
+						markdownLower.includes(indicator.toLowerCase())
+					);
+
+					if (hasLoadingIndicator) {
+						console.warn(`[SyncService] Content appears to be a loading placeholder`);
+
+						// If this is not the last attempt, retry with delay
+						if (attempt < retries) {
+							const delay = 2000 + (attempt * 1000); // 2s, 3s, 4s
+							console.debug(`[SyncService] Waiting ${delay}ms before retry (page may need time to load)...`);
+							await new Promise(resolve => setTimeout(resolve, delay));
+							continue;
+						} else {
+							// On last attempt, return null to indicate failure
+							console.error(`[SyncService] Failed to fetch actual content after ${retries} attempts`);
+							console.error(`[SyncService] The page may require JavaScript to load content`);
+							console.error(`[SyncService] URL will be saved but content could not be fetched: ${url}`);
+							return null;
+						}
+					} else {
+						console.warn(`[SyncService] Content is short but doesn't seem to be a loading placeholder, will use it`);
+					}
+				}
 
 				console.debug(`[SyncService] Successfully fetched web content (${markdown.length} characters)`);
 				return markdown;
@@ -228,8 +318,9 @@ export class SyncService {
 
 					if (!src) return '';
 
-					// Return markdown image syntax with single blank line
-					return `\n![${alt}](${src})\n`;
+					// Return markdown image syntax without extra newlines
+					// Let the cleanup logic handle spacing
+					return `![${alt}](${src})`;
 				}
 			});
 
@@ -271,9 +362,21 @@ export class SyncService {
 				}
 			}
 
-			// Clean up excessive whitespace - reduce all multiple newlines to single blank line
+			// Clean up excessive whitespace and formatting issues
 			markdown = markdown
-				.replace(/\n{3,}/g, '\n\n')  // Reduce 3+ newlines to 2 (one blank line)
+				// Remove trailing whitespace from each line
+				.split('\n')
+				.map(line => line.trimEnd())
+				.join('\n')
+				// Fix list items: remove blank lines between consecutive list items
+				// This matches: list item + blank line + another list item
+				.replace(/^([-*]|\d+\.)\s+(.+?)\n\n(?=^([-*]|\d+\.)\s+)/gm, '$1 $2\n')
+				// Remove excessive spaces (but keep single spaces)
+				.replace(/ {2,}/g, ' ')
+				// CRITICAL: Remove ALL instances of more than one consecutive blank line
+				// This ensures NO MORE than one blank line (two \n) appears anywhere
+				.replace(/\n{3,}/g, '\n\n')
+				// Remove blank lines at the very start and end
 				.trim();
 
 			return markdown;
@@ -362,6 +465,18 @@ export class SyncService {
 			lines.push('## 网页内容');
 			lines.push('');
 			lines.push(webContent);
+			lines.push('');
+		} else if (bookmark.url) {
+			// If web content couldn't be fetched, add a note about it
+			lines.push('## 网页内容');
+			lines.push('');
+			lines.push('> ⚠️ 无法自动获取网页内容。可能的原因:');
+			lines.push('> - 网页需要 JavaScript 才能加载内容');
+			lines.push('> - 网页加载速度过慢');
+			lines.push('> - 网页需要登录或特殊权限');
+			lines.push('> - 网页链接已失效');
+			lines.push('>');
+			lines.push('> 请点击上方"访问原文"链接查看完整内容。');
 			lines.push('');
 		}
 

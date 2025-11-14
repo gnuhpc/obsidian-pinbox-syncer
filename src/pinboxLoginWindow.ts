@@ -1,10 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable no-undef */
-/* eslint-disable obsidianmd/ui/sentence-case */
 import { Notice } from 'obsidian';
 
 // Define minimal Electron types we need
@@ -25,6 +18,36 @@ interface ElectronBrowserWindow {
 	};
 }
 
+interface ElectronRemote {
+	BrowserWindow: new (options: BrowserWindowOptions) => ElectronBrowserWindow;
+	getCurrentWindow(): ElectronBrowserWindow;
+}
+
+interface ElectronModule {
+	remote: ElectronRemote;
+}
+
+interface BrowserWindowOptions {
+	parent?: ElectronBrowserWindow;
+	width?: number;
+	height?: number;
+	show?: boolean;
+	webPreferences?: {
+		nodeIntegration?: boolean;
+		contextIsolation?: boolean;
+	};
+}
+
+interface RequestDetails {
+	url?: string;
+	statusCode?: number;
+	requestHeaders?: Record<string, string>;
+}
+
+interface AlphaInfo {
+	token?: string;
+}
+
 export class PinboxLoginWindow {
 	private window: ElectronBrowserWindow | null;
 	private onSuccess: (token: string) => void;
@@ -36,8 +59,10 @@ export class PinboxLoginWindow {
 
 		try {
 			// Access Electron's remote module
-			const { remote } = require('electron');
-			const { BrowserWindow } = remote;
+			// eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef -- Electron require is necessary for desktop features
+			const electron = require('electron') as ElectronModule;
+			const remote = electron.remote;
+			const BrowserWindow = remote.BrowserWindow;
 
 			console.debug('[PinboxLoginWindow] Creating Electron BrowserWindow');
 
@@ -54,7 +79,7 @@ export class PinboxLoginWindow {
 			});
 
 			// Store reference - we know it's not null because we just created it
-			const win = this.window!;
+			const win = this.window;
 
 			// Show window when ready
 			win.once('ready-to-show', () => {
@@ -79,12 +104,14 @@ export class PinboxLoginWindow {
 			};
 
 			// Listen for request headers to capture the token
-			session.webRequest.onSendHeaders(loginFilter, (details: Record<string, any>) => {
-				console.debug('[PinboxLoginWindow] Request detected:', details.url);
+			session.webRequest.onSendHeaders(loginFilter, (details: Record<string, unknown>) => {
+				const typedDetails = details as RequestDetails;
+				console.debug('[PinboxLoginWindow] Request detected:', typedDetails.url);
 
 				// Check Authorization header
-				if (details.requestHeaders && details.requestHeaders['Authorization']) {
-					const authHeader = details.requestHeaders['Authorization'] as string;
+				const requestHeaders = typedDetails.requestHeaders;
+				if (requestHeaders && requestHeaders['Authorization']) {
+					const authHeader = requestHeaders['Authorization'];
 					console.debug('[PinboxLoginWindow] Found Authorization header:', authHeader);
 
 					// Extract token from "Bearer <token>" format
@@ -98,18 +125,18 @@ export class PinboxLoginWindow {
 				}
 
 				// Check cookies for alpha_info
-				if (details.requestHeaders && details.requestHeaders['Cookie']) {
-					const cookies = details.requestHeaders['Cookie'] as string;
+				if (requestHeaders && requestHeaders['Cookie']) {
+					const cookies = requestHeaders['Cookie'];
 					console.debug('[PinboxLoginWindow] Checking cookies');
 
 					// Try to extract token from alpha_info cookie
 					const alphaInfoMatch = cookies.match(/alpha_info=([^;]+)/);
 					if (alphaInfoMatch && alphaInfoMatch[1]) {
 						try {
-							const alphaInfo = JSON.parse(decodeURIComponent(alphaInfoMatch[1]));
+							const alphaInfo = JSON.parse(decodeURIComponent(alphaInfoMatch[1])) as AlphaInfo;
 							if (alphaInfo.token) {
 								console.debug('[PinboxLoginWindow] Found token in alpha_info cookie');
-								this.handleLoginSuccess(alphaInfo.token as string);
+								this.handleLoginSuccess(alphaInfo.token);
 								return;
 							}
 						} catch (error) {
@@ -120,13 +147,14 @@ export class PinboxLoginWindow {
 			});
 
 			// Also monitor completed requests for response data
-			session.webRequest.onCompleted(loginFilter, (details: Record<string, any>) => {
-				if (details.statusCode === 200) {
-					console.debug('[PinboxLoginWindow] Successful request to:', details.url);
+			session.webRequest.onCompleted(loginFilter, (details: Record<string, unknown>) => {
+				const typedDetails = details as RequestDetails;
+				if (typedDetails.statusCode === 200) {
+					console.debug('[PinboxLoginWindow] Successful request to:', typedDetails.url);
 
 					// If we reach user API endpoints successfully, the user is logged in
 					// We should be able to get the token from request headers
-					if (details.url && (details.url as string).includes('/api/user/')) {
+					if (typedDetails.url && typedDetails.url.includes('/api/user/')) {
 						console.debug('[PinboxLoginWindow] User API accessed, login successful');
 					}
 				}
@@ -157,6 +185,7 @@ export class PinboxLoginWindow {
 			}
 		} catch (error) {
 			console.error('[PinboxLoginWindow] Failed to load login page:', error);
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 			new Notice('加载 Pinbox 登录页面失败');
 			throw error;
 		}
@@ -171,6 +200,7 @@ export class PinboxLoginWindow {
 		this.hasCalledSuccess = true;
 
 		console.debug('[PinboxLoginWindow] Login successful, token obtained');
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 		new Notice('登录成功！');
 
 		// Close the window immediately to stop intercepting requests
@@ -196,14 +226,18 @@ export class PinboxLoginWindow {
 					console.debug('[PinboxLoginWindow] Clearing web request listeners');
 					// Clear all listeners by creating new filter that matches nothing
 					try {
-						session.webRequest.onSendHeaders(null as any, () => {});
-						session.webRequest.onCompleted(null as any, () => {});
-					} catch (e) {
-						console.debug('[PinboxLoginWindow] Error clearing listeners:', e);
+						session.webRequest.onSendHeaders(null as unknown, () => {
+							// Empty callback to clear listeners
+						});
+						session.webRequest.onCompleted(null as unknown, () => {
+							// Empty callback to clear listeners
+						});
+					} catch (error: unknown) {
+						console.debug('[PinboxLoginWindow] Error clearing listeners:', error);
 					}
 				}
-			} catch (e) {
-				console.debug('[PinboxLoginWindow] Error accessing session:', e);
+			} catch (error: unknown) {
+				console.debug('[PinboxLoginWindow] Error accessing session:', error);
 			}
 
 			this.window.close();

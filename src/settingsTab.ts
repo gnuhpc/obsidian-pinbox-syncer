@@ -1,4 +1,3 @@
-/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import PinboxSyncerPlugin from '../main';
 import { PinboxAuthModal } from './authModal';
@@ -121,16 +120,19 @@ export class PinboxSettingTab extends PluginSettingTab {
 		if (!isDataviewInstalled) {
 			const warningDiv = containerEl.createDiv();
 			warningDiv.addClass('pinbox-warning');
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 			const titleEl = warningDiv.createEl('p', {
 				text: '⚠️ 未检测到 Dataview 插件'
 			});
 			titleEl.addClass('pinbox-warning-title');
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 			const descEl = warningDiv.createEl('p', {
 				text: '请先安装并启用 Dataview 插件才能使用索引功能。'
 			});
 			descEl.addClass('pinbox-warning-desc');
 		}
 
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 		new Setting(containerEl)
 			.setName('启用 Dataview 索引')
 			.setDesc(isDataviewInstalled
@@ -146,6 +148,7 @@ export class PinboxSettingTab extends PluginSettingTab {
 				}));
 
 		if (this.plugin.settings.enableDataviewIndex && isDataviewInstalled) {
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 			new Setting(containerEl)
 				.setName('索引文件路径')
 				.setDesc('Dataview 索引文件的保存位置（相对于 vault 根目录）')

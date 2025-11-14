@@ -1,0 +1,72 @@
+/* Delete button component */
+.pinbox-delete-button {
+    float: right;
+    margin-left: 8px;
+    margin-top: 4px;
+}
+
+.pinbox-delete-btn {
+    padding: 4px;
+    margin: 0;
+    background: none;
+    background-color: transparent;
+    color: var(--text-muted);
+    border: none;
+    outline: none;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    transition: color 0.2s ease, transform 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    box-shadow: none;
+}
+
+.pinbox-delete-btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.pinbox-delete-btn:hover {
+    color: var(--text-error);
+    transform: scale(1.1);
+    background: none;
+    border: none;
+}
+
+.pinbox-delete-btn:active {
+    transform: scale(0.95);
+    background: none;
+    border: none;
+}
+
+.pinbox-delete-btn:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Warning box component */
+.pinbox-warning {
+    padding: 10px;
+    background: var(--background-secondary);
+    border-left: 3px solid var(--text-warning);
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.pinbox-warning-title {
+    margin: 0 0 5px 0;
+    font-weight: bold;
+    color: var(--text-warning);
+}
+
+.pinbox-warning-desc {
+    margin: 0;
+    font-size: 0.9em;
+}

@@ -1,6 +1,3 @@
-/* eslint-disable obsidianmd/no-static-styles-assignment */
-/* eslint-disable @microsoft/sdl/no-inner-html */
-/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, Modal, Notice, Setting } from 'obsidian';
 import { OAuthServer } from './oauthServer';
 import { PinboxLoginWindow } from './pinboxLoginWindow';
@@ -40,43 +37,39 @@ export class PinboxAuthModal extends Modal {
 		const electronLoginSection = contentEl.createEl('div', {
 			cls: 'pinbox-electron-login'
 		});
-		electronLoginSection.style.marginBottom = '20px';
-		electronLoginSection.style.padding = '15px';
-		electronLoginSection.style.backgroundColor = 'var(--background-secondary)';
-		electronLoginSection.style.borderRadius = '8px';
 
 		// Title and button in one row
-		const headerRow = electronLoginSection.createEl('div');
-		headerRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;';
+		const headerRow = electronLoginSection.createEl('div', {
+			cls: 'pinbox-electron-login-header'
+		});
 
 		headerRow.createEl('h3', {
 			text: '✨ 使用独立窗口登录'
-		}).style.cssText = 'margin: 0; font-size: 1.1em;';
+		});
 
 		const loginBtn = headerRow.createEl('button', {
-			text: '在独立窗口中登录'
+			text: '在独立窗口中登录',
+			cls: 'pinbox-electron-login-btn'
 		});
-		loginBtn.style.cssText = 'padding: 6px 16px; background: var(--interactive-accent); color: var(--text-on-accent); border: none; border-radius: 4px; cursor: pointer; font-weight: 500;';
 		loginBtn.onclick = () => {
 			this.openElectronLoginWindow();
 		};
 
 		electronLoginSection.createEl('p', {
-			text: '扫码后自动获取令牌，无需手动操作。'
-		}).style.cssText = 'font-size: 0.9em; margin: 0; color: var(--text-muted);';
+			text: '扫码后自动获取令牌，无需手动操作。',
+			cls: 'pinbox-electron-login-desc'
+		});
 
 		// Manual token input option
 		contentEl.createEl('p', {
 			text: '如果独立窗口登录失败,可以手动输入令牌:',
 			cls: 'pinbox-alternative'
-		}).style.marginTop = '20px';
+		});
 
 		// Manual token input
 		const manualInput = contentEl.createEl('div', {
 			cls: 'pinbox-manual-input'
 		});
-
-		manualInput.style.marginTop = '15px';
 
 		let manualToken = '';
 
@@ -106,47 +99,50 @@ export class PinboxAuthModal extends Modal {
 		const limitationNote = contentEl.createEl('div', {
 			cls: 'pinbox-limitation-note'
 		});
-		limitationNote.style.marginTop = '15px';
-		limitationNote.style.padding = '15px';
-		limitationNote.style.backgroundColor = 'var(--background-secondary)';
-		limitationNote.style.borderRadius = '8px';
-		limitationNote.style.fontSize = '0.9em';
-		limitationNote.style.color = 'var(--text-normal)';
+		limitationNote.addClass('pinbox-limitation-note');
 
-		limitationNote.createEl('p', {
+		const noteTitle = limitationNote.createEl('p', {
 			text: '💡 手动获取令牌的步骤'
-		}).style.cssText = 'margin: 0 0 10px 0; font-weight: bold; font-size: 1.05em;';
+		});
+		noteTitle.addClass('pinbox-note-title');
 
 		const steps = limitationNote.createEl('ol');
-		steps.style.cssText = 'margin: 0; padding-left: 20px; line-height: 1.8;';
+		steps.addClass('pinbox-steps-list');
 
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 		steps.createEl('li', { text: '点击下方"在浏览器中打开登录页"按钮' });
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 		steps.createEl('li', { text: '在浏览器中使用微信扫码登录 Pinbox' });
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 		steps.createEl('li', { text: '登录后按 F12 打开开发者工具' });
 
 		const step4 = steps.createEl('li');
-		step4.innerHTML = '切换到 <strong>Console</strong> 标签，复制并粘贴以下代码后回车：';
+		step4.createSpan({ text: '切换到 ' });
+		step4.createEl('strong', { text: 'Console' });
+		step4.appendText(' 标签，复制并粘贴以下代码后回车：');
 
 		// Add code block for easy copying
 		const codeBlock = limitationNote.createEl('div');
-		codeBlock.style.cssText = 'margin: 10px 0; padding: 12px; background-color: var(--background-primary); border-radius: 5px; font-family: monospace; position: relative; border: 1px solid var(--background-modifier-border);';
+		codeBlock.addClass('pinbox-code-block');
 
 		const codeText = codeBlock.createEl('code');
-		codeText.style.cssText = 'user-select: all; display: block; word-break: break-all; color: var(--text-accent);';
+		codeText.addClass('pinbox-code-text');
 		codeText.textContent = 'JSON.parse(localStorage.getItem(\'alpha_info\')).token';
 
 		// Add copy button
 		const copyBtn = codeBlock.createEl('button', { text: '📋' });
-		copyBtn.style.cssText = 'position: absolute; top: 8px; right: 8px; padding: 6px 10px; background: var(--interactive-accent); color: var(--text-on-accent); border: none; border-radius: 4px; cursor: pointer; font-size: 1em;';
+		copyBtn.addClass('pinbox-copy-btn');
 		copyBtn.onclick = () => {
 			void navigator.clipboard.writeText('JSON.parse(localStorage.getItem(\'alpha_info\')).token');
 			copyBtn.textContent = '✓';
 			setTimeout(() => { copyBtn.textContent = '📋'; }, 2000);
 		};
 
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 		steps.createEl('li', { text: '复制显示的 token（不含引号），粘贴到上方输入框并提交' });
 
 		// Add open in browser button
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 		new Setting(contentEl)
 			.setName('在浏览器中打开')
 			.setDesc('打开Pinbox网站进行登录')
@@ -182,6 +178,7 @@ export class PinboxAuthModal extends Modal {
 		} catch (error) {
 			console.error('[PinboxAuthModal] Failed to open Electron login window:', error);
 			const errorMessage = error instanceof Error ? error.message : String(error);
+// /skip I need use Chinese due to the majority of the target users is Chinese.
 			new Notice('无法打开登录窗口：' + errorMessage + '\n请使用下方的内嵌二维码或手动输入令牌');
 		}
 	}

@@ -98,7 +98,7 @@ export class PinboxAPI {
 		return null;
 	}
 
-	private async getUserId(): Promise<string> {
+	private getUserId(): string {
 		if (this.userId) {
 			return this.userId;
 		}
@@ -114,7 +114,7 @@ export class PinboxAPI {
 	async getCollections(): Promise<PinboxCollection[]> {
 		console.debug('[PinboxAPI] Fetching collections...');
 		try {
-			const userId = await this.getUserId();
+			const userId = this.getUserId();
 			const url = `${this.baseUrl}/api/user/${userId}/collection?order=default&sort=asc`;
 			console.debug('[PinboxAPI] Collections URL:', url);
 
@@ -148,7 +148,7 @@ export class PinboxAPI {
 	async getCollectionItems(collectionId: number | string, count = 50, offset = 0): Promise<{ items: PinboxBookmark[], total: number }> {
 		console.debug(`[PinboxAPI] Fetching items from collection ${collectionId} (offset: ${offset}, count: ${count})...`);
 		try {
-			const userId = await this.getUserId();
+			const userId = this.getUserId();
 			const url = `${this.baseUrl}/api/user/${userId}/collection/${collectionId}/item?count=${count}&offset=${offset}&category=all&order=create&sort=desc`;
 			console.debug('[PinboxAPI] Collection items URL:', url);
 
@@ -250,7 +250,7 @@ export class PinboxAPI {
 	async testConnection(): Promise<boolean> {
 		console.debug('[PinboxAPI] Testing connection...');
 		try {
-			const userId = await this.getUserId();
+			const userId = this.getUserId();
 			console.debug('[PinboxAPI] Testing with user ID:', userId);
 
 			// Test by fetching collections (lightweight request)
@@ -266,7 +266,7 @@ export class PinboxAPI {
 	async deleteItem(itemId: number | string): Promise<boolean> {
 		console.debug(`[PinboxAPI] Deleting item ${itemId}...`);
 		try {
-			const userId = await this.getUserId();
+			const userId = this.getUserId();
 			const url = `${this.baseUrl}/api/user/${userId}/store?storeIds[]=${itemId}`;
 			console.debug('[PinboxAPI] Delete URL:', url);
 			console.debug('[PinboxAPI] Access Token:', this.accessToken ? `${this.accessToken.substring(0, 20)}...` : 'empty');

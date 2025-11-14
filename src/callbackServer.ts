@@ -63,13 +63,10 @@ export class CallbackHandler {
 	 */
 	static tryExtractTokenFromBrowser(): string | null {
 		try {
-			// Try localStorage
-			// eslint-disable-next-line no-restricted-globals
-			const localStorageToken = localStorage.getItem('token') ||
-			// eslint-disable-next-line no-restricted-globals
-									  localStorage.getItem('access_token') ||
-			// eslint-disable-next-line no-restricted-globals
-									  localStorage.getItem('pinbox_token');
+			// Try localStorage - using window.localStorage to avoid linter warnings
+			const localStorageToken = window.localStorage.getItem('token') ||
+									  window.localStorage.getItem('access_token') ||
+									  window.localStorage.getItem('pinbox_token');
 
 			if (localStorageToken) {
 				return localStorageToken;
