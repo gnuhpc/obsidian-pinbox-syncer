@@ -263,40 +263,40 @@ export default class PinboxSyncerPlugin extends Plugin {
 			// Confirm deletion
 			const confirmed = await new Promise<boolean>((resolve) => {
 				const modal = new Modal(this.app);
-				modal.titleEl.setText('⚠️ Confirm deletion');
+				modal.titleEl.setText('⚠️ 确认删除');
 
 				const contentDiv = modal.contentEl.createDiv();
 				contentDiv.addClass('pinbox-delete-modal');
 
 				contentDiv.createEl('p', {
-					text: `Are you sure you want to delete this bookmark?`,
+					text: `确定要删除这个书签吗?`,
 					cls: 'pinbox-delete-question'
 				});
 
 				contentDiv.createEl('p', {
-					text: `Item ID: ${itemId}`,
+					text: `项目 ID: ${itemId}`,
 					cls: 'pinbox-delete-id'
 				});
 
 				const warningDiv = contentDiv.createDiv({ cls: 'pinbox-delete-warning' });
 				warningDiv.createEl('p', {
-					text: '⚠️ This action will:',
+					text: '⚠️ 此操作将会:',
 					cls: 'pinbox-warning-title'
 				});
 
 				const warningList = warningDiv.createEl('ul');
-				warningList.createEl('li', { text: 'Delete this bookmark from Pinbox cloud' });
-				warningList.createEl('li', { text: 'Delete the local Obsidian note file' });
+				warningList.createEl('li', { text: '从 Pinbox 云端删除此书签' });
+				warningList.createEl('li', { text: '删除本地 Obsidian 笔记文件' });
 
 				warningDiv.createEl('p', {
-					text: 'This action cannot be undone!',
+					text: '此操作无法撤销!',
 					cls: 'pinbox-warning-final'
 				});
 
 				const buttonContainer = modal.contentEl.createDiv({ cls: 'modal-button-container' });
 
 				const cancelButton = buttonContainer.createEl('button', {
-					text: 'Cancel'
+					text: '取消'
 				});
 				cancelButton.addEventListener('click', () => {
 					modal.close();
@@ -304,7 +304,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 				});
 
 				const deleteButton = buttonContainer.createEl('button', {
-					text: 'Confirm deletion',
+					text: '确认删除',
 					cls: 'mod-warning'
 				});
 				deleteButton.addEventListener('click', () => {
