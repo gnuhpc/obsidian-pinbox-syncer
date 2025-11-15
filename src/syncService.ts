@@ -6,15 +6,27 @@ export class SyncService {
 	private app: App;
 	private api: PinboxAPI;
 	private syncFolder: string;
+	private downloadImages: boolean;
+	private imageFolder: string;
 
-	constructor(app: App, api: PinboxAPI, syncFolder: string) {
+	constructor(app: App, api: PinboxAPI, syncFolder: string, downloadImages: boolean = false, imageFolder: string = 'pics') {
 		this.app = app;
 		this.api = api;
 		this.syncFolder = syncFolder;
+		this.downloadImages = downloadImages;
+		this.imageFolder = imageFolder;
 	}
 
 	setSyncFolder(folder: string) {
 		this.syncFolder = folder;
+	}
+
+	setDownloadImages(downloadImages: boolean) {
+		this.downloadImages = downloadImages;
+	}
+
+	setImageFolder(imageFolder: string) {
+		this.imageFolder = imageFolder;
 	}
 
 	async sync(): Promise<number> {
@@ -70,7 +82,15 @@ export class SyncService {
 		const folder = this.app.vault.getAbstractFileByPath(normalizedPath);
 
 		if (!folder) {
-			await this.app.vault.createFolder(normalizedPath);
+			try {
+				await this.app.vault.createFolder(normalizedPath);
+			} catch (error) {
+				// Ignore "Folder already exists" error
+				// This can happen when multiple operations try to create the same folder simultaneously
+				if (error instanceof Error && !error.message.includes('Folder already exists')) {
+					throw error;
+				}
+			}
 		}
 	}
 
@@ -93,7 +113,12 @@ export class SyncService {
 			}
 
 			// Generate markdown content with web content
-			const content = this.generateMarkdownContent(bookmark, webContent);
+			let content = this.generateMarkdownContent(bookmark, webContent);
+
+			// Download images if enabled
+			if (this.downloadImages) {
+				content = await this.downloadImagesInContent(content, bookmark.id, filePath);
+			}
 
 			// Create new file
 			console.debug(`[SyncService] Creating new file: ${filePath}`);
@@ -109,6 +134,185 @@ export class SyncService {
 			.replace(/\s+/g, ' ')
 			.trim()
 			.substring(0, 200); // Limit length
+	}
+
+	private async downloadImage(imageUrl: string, bookmarkId: number): Promise<string | null> {
+		try {
+			console.debug(`[SyncService] Downloading image: ${imageUrl}`);
+
+			// Create subfolder for this bookmark's images (relative to vault root)
+			const bookmarkImageFolder = normalizePath(`${this.imageFolder}/${bookmarkId}`);
+			await this.ensureFolderExists(bookmarkImageFolder);
+
+			// Extract file extension from URL
+			let extension = 'jpg'; // default extension
+
+			// Try to get extension from query parameters (e.g., wx_fmt=png)
+			try {
+				const url = new URL(imageUrl);
+				const wxFmt = url.searchParams.get('wx_fmt');
+				const fmt = url.searchParams.get('fmt');
+				const format = url.searchParams.get('format');
+				const tp = url.searchParams.get('tp'); // WeChat also uses tp parameter
+
+				// Check various format parameters, but skip invalid values like 'other'
+				if (wxFmt && wxFmt !== 'other' && /^(jpg|jpeg|png|gif|webp|bmp|svg|ico)$/i.test(wxFmt)) {
+					extension = wxFmt.toLowerCase();
+				} else if (tp && /^(jpg|jpeg|png|gif|webp|bmp|svg|ico)$/i.test(tp)) {
+					// tp parameter often contains the real format when wx_fmt=other
+					extension = tp.toLowerCase();
+				} else if (fmt && /^(jpg|jpeg|png|gif|webp|bmp|svg|ico)$/i.test(fmt)) {
+					extension = fmt.toLowerCase();
+				} else if (format && /^(jpg|jpeg|png|gif|webp|bmp|svg|ico)$/i.test(format)) {
+					extension = format.toLowerCase();
+				} else {
+					// Try to get extension from filename in path
+					const pathname = url.pathname;
+					const pathParts = pathname.split('/');
+					const fileName = pathParts[pathParts.length - 1];
+
+					// Only extract extension if filename contains a dot
+					if (fileName.includes('.')) {
+						const fileExtension = fileName.split('.').pop();
+
+						// Validate extension (common image formats)
+						if (fileExtension && /^(jpg|jpeg|png|gif|webp|bmp|svg|ico)$/i.test(fileExtension)) {
+							extension = fileExtension.toLowerCase();
+						}
+					}
+				}
+			} catch (error) {
+				console.debug('[SyncService] Error parsing image URL, using default extension:', error);
+			}
+
+			const timestamp = Date.now();
+			const fileName = `${timestamp}.${extension}`;
+			const filePath = normalizePath(`${bookmarkImageFolder}/${fileName}`);
+
+			// Check if file already exists
+			const existingFile = this.app.vault.getAbstractFileByPath(filePath);
+			if (existingFile) {
+				console.debug(`[SyncService] Image already exists: ${filePath}`);
+				return `${this.imageFolder}/${bookmarkId}/${fileName}`;
+			}
+
+			// Download image
+			const response = await requestUrl({
+				url: imageUrl,
+				method: 'GET',
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+				}
+			});
+
+			if (response.status === 200 && response.arrayBuffer) {
+				// Save image file
+				await this.app.vault.createBinary(filePath, response.arrayBuffer);
+				console.debug(`[SyncService] Image saved: ${filePath}`);
+				return `${this.imageFolder}/${bookmarkId}/${fileName}`;
+			} else {
+				console.error(`[SyncService] Failed to download image: HTTP ${response.status}`);
+				return null;
+			}
+		} catch (error) {
+			console.error(`[SyncService] Error downloading image ${imageUrl}:`, error);
+			return null;
+		}
+	}
+
+	private async downloadImagesInContent(content: string, bookmarkId: number, markdownFilePath: string): Promise<string> {
+		if (!this.downloadImages) {
+			console.debug(`[SyncService] Image download is disabled for bookmark ${bookmarkId}`);
+			return content;
+		}
+
+		console.debug(`[SyncService] Processing images for bookmark ${bookmarkId}`);
+		console.debug(`[SyncService] Content length: ${content.length} characters`);
+
+		// Match markdown image syntax: ![alt](url)
+		const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+		let match;
+		const replacements: Array<{ original: string; replacement: string }> = [];
+		let matchCount = 0;
+
+		while ((match = imageRegex.exec(content)) !== null) {
+			matchCount++;
+			const fullMatch = match[0];
+			const imageUrl = match[2];
+
+			console.debug(`[SyncService] Found image #${matchCount}: ${imageUrl.substring(0, 100)}...`);
+
+			// Skip if already a local path
+			if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+				console.debug(`[SyncService] Skipping non-HTTP image: ${imageUrl}`);
+				continue;
+			}
+
+			// Download image
+			console.debug(`[SyncService] Downloading image from: ${imageUrl}`);
+			const vaultRelativeImagePath = await this.downloadImage(imageUrl, bookmarkId);
+			if (vaultRelativeImagePath) {
+				// Extract filename from path - Obsidian can find files by name alone
+				const fileName = vaultRelativeImagePath.split('/').pop() || vaultRelativeImagePath;
+				const replacement = `![[${fileName}]]`;
+				replacements.push({ original: fullMatch, replacement });
+				console.debug(`[SyncService] Image downloaded successfully: ${fileName}`);
+			} else {
+				console.debug(`[SyncService] Failed to download image: ${imageUrl}`);
+			}
+		}
+
+		console.debug(`[SyncService] Found ${matchCount} images in content, matched ${replacements.length} for download`);
+
+		// Apply replacements
+		let updatedContent = content;
+		for (const { original, replacement } of replacements) {
+			updatedContent = updatedContent.replace(original, replacement);
+		}
+
+		console.debug(`[SyncService] Processed ${replacements.length} images for bookmark ${bookmarkId}`);
+		return updatedContent;
+	}
+
+	private getRelativePath(fromPath: string, toPath: string): string {
+		// Get directory of the markdown file
+		const fromDir = fromPath.substring(0, fromPath.lastIndexOf('/'));
+
+		// Split paths into parts
+		const fromParts = fromDir.split('/').filter(p => p);
+		const toParts = toPath.split('/').filter(p => p);
+
+		// Find common path
+		let commonLength = 0;
+		const minLength = Math.min(fromParts.length, toParts.length);
+		for (let i = 0; i < minLength; i++) {
+			if (fromParts[i] === toParts[i]) {
+				commonLength++;
+			} else {
+				break;
+			}
+		}
+
+		// Calculate how many levels to go up
+		const upLevels = fromParts.length - commonLength;
+
+		// Build relative path
+		let relativePath: string;
+		if (upLevels === 0 && commonLength === fromParts.length) {
+			// Same directory or subdirectory
+			const downPath = toParts.slice(commonLength).join('/');
+			relativePath = downPath || '.';
+		} else if (upLevels > 0) {
+			// Need to go up directories
+			const upPath = '../'.repeat(upLevels);
+			const downPath = toParts.slice(commonLength).join('/');
+			relativePath = upPath + downPath;
+		} else {
+			// Fallback to absolute path
+			relativePath = toPath;
+		}
+
+		return relativePath;
 	}
 
 	private async fetchWebContent(url: string, retries: number = 3): Promise<string | null> {
@@ -440,10 +644,6 @@ export class SyncService {
 		lines.push('---');
 		lines.push('');
 
-		// URL (only the link, title is in frontmatter)
-		lines.push(`[访问原文](${bookmark.url})`);
-		lines.push('');
-
 		// Note (user's personal notes)
 		if (bookmark.note) {
 			lines.push('## 笔记');
@@ -452,32 +652,18 @@ export class SyncService {
 			lines.push('');
 		}
 
-		// Thumbnail or Cover image
-		if (imageUrl) {
-			lines.push('## 图片');
-			lines.push('');
-			lines.push(`![预览](${imageUrl})`);
-			lines.push('');
-		}
-
 		// Web content (if fetched successfully)
 		if (webContent && webContent.length > 0) {
-			lines.push('## 网页内容');
-			lines.push('');
 			lines.push(webContent);
-			lines.push('');
 		} else if (bookmark.url) {
 			// If web content couldn't be fetched, add a note about it
-			lines.push('## 网页内容');
-			lines.push('');
 			lines.push('> ⚠️ 无法自动获取网页内容。可能的原因:');
 			lines.push('> - 网页需要 JavaScript 才能加载内容');
 			lines.push('> - 网页加载速度过慢');
 			lines.push('> - 网页需要登录或特殊权限');
 			lines.push('> - 网页链接已失效');
 			lines.push('>');
-			lines.push('> 请点击上方"访问原文"链接查看完整内容。');
-			lines.push('');
+			lines.push('> 请在元数据中点击 url 链接查看完整内容。');
 		}
 
 		return lines.join('\n');

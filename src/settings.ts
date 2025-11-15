@@ -7,6 +7,8 @@ export interface PinboxSyncerSettings {
 	enableDataviewIndex: boolean;
 	dataviewIndexPath: string;
 	firstRun: boolean;
+	downloadImages: boolean;
+	imageFolder: string;
 }
 
 export const DEFAULT_SETTINGS: PinboxSyncerSettings = {
@@ -17,5 +19,7 @@ export const DEFAULT_SETTINGS: PinboxSyncerSettings = {
 	lastSyncTime: 0,
 	enableDataviewIndex: false, // Will be set on first run based on Dataview availability
 	dataviewIndexPath: 'Pinbox/!Pinbox Index.md',
-	firstRun: true
+	firstRun: true,
+	downloadImages: false,
+	imageFolder: 'Pinbox/pics'
 }

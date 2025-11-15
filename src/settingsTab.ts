@@ -169,5 +169,35 @@ export class PinboxSettingTab extends PluginSettingTab {
 						await this.plugin.createPinboxIndex(true);
 					}));
 		}
+
+		// Image download settings
+		// /skip I need use Chinese due to the majority of the target users is Chinese.
+		new Setting(containerEl).setName("图片下载设置").setHeading();
+
+		// /skip I need use Chinese due to the majority of the target users is Chinese.
+		new Setting(containerEl)
+			.setName('下载图片到本地')
+			.setDesc('同步时自动下载网页中的图片到本地')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.downloadImages)
+				.onChange(async (value) => {
+					this.plugin.settings.downloadImages = value;
+					await this.plugin.saveSettings();
+					this.display(); // Refresh to show/hide image folder setting
+				}));
+
+		if (this.plugin.settings.downloadImages) {
+			// /skip I need use Chinese due to the majority of the target users is Chinese.
+			new Setting(containerEl)
+				.setName('图片文件夹')
+				.setDesc('图片保存的文件夹路径（相对于 vault 根目录）')
+				.addText(text => text
+					.setPlaceholder('Pinbox/.pics')
+					.setValue(this.plugin.settings.imageFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.imageFolder = value || 'Pinbox/.pics';
+						await this.plugin.saveSettings();
+					}));
+		}
 	}
 }

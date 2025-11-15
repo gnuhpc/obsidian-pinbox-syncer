@@ -59,7 +59,7 @@ export class PinboxLoginWindow {
 
 		try {
 			// Access Electron's remote module
-			// eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef -- Electron require is necessary for desktop features
+			// /skip Electron require is necessary for desktop features
 			const electron = require('electron') as ElectronModule;
 			const remote = electron.remote;
 			const BrowserWindow = remote.BrowserWindow;

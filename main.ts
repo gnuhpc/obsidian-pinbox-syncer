@@ -1,4 +1,4 @@
-import { Notice, Plugin, MarkdownView, Modal, TFile, setIcon } from 'obsidian';
+import { Notice, Plugin, MarkdownView, Modal, TFile, setIcon, normalizePath, addIcon } from 'obsidian';
 import { PinboxSyncerSettings, DEFAULT_SETTINGS } from './src/settings';
 import { PinboxAPI } from './src/pinboxApi';
 import { SyncService } from './src/syncService';
@@ -20,6 +20,29 @@ export default class PinboxSyncerPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
+		// Register custom sync icon
+		addIcon('pinbox-sync', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor">
+			<!-- Top arrow (right direction) -->
+			<path d="M 25 15 L 75 15 L 75 20 L 70 15 L 75 10 L 75 15" stroke="currentColor" stroke-width="3" fill="none" stroke-linejoin="miter"/>
+			<path d="M 70 10 L 80 15 L 70 20 Z" fill="currentColor"/>
+
+			<!-- Right arrow (down direction) -->
+			<path d="M 85 25 L 85 75 L 90 75 L 85 80 L 80 75 L 85 75" stroke="currentColor" stroke-width="3" fill="none" stroke-linejoin="miter"/>
+			<path d="M 80 70 L 85 80 L 90 70 Z" fill="currentColor"/>
+
+			<!-- Bottom arrow (left direction) -->
+			<path d="M 75 85 L 25 85 L 25 80 L 30 85 L 25 90 L 25 85" stroke="currentColor" stroke-width="3" fill="none" stroke-linejoin="miter"/>
+			<path d="M 30 90 L 20 85 L 30 80 Z" fill="currentColor"/>
+
+			<!-- Left arrow (up direction) -->
+			<path d="M 15 75 L 15 25 L 10 25 L 15 20 L 20 25 L 15 25" stroke="currentColor" stroke-width="3" fill="none" stroke-linejoin="miter"/>
+			<path d="M 20 30 L 15 20 L 10 30 Z" fill="currentColor"/>
+
+			<!-- PINBOX text in center -->
+			<text x="50" y="48" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="currentColor">PIN</text>
+			<text x="50" y="62" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="currentColor">BOX</text>
+		</svg>`);
+
 		// Check if this is first run and auto-enable Dataview index if plugin is installed
 		if (this.settings.firstRun) {
 			const dataviewPlugin = (this.app as unknown as AppWithPlugins).plugins.plugins['dataview'];
@@ -39,12 +62,14 @@ export default class PinboxSyncerPlugin extends Plugin {
 		this.syncService = new SyncService(
 			this.app,
 			this.api,
-			this.settings.syncFolder
+			this.settings.syncFolder,
+			this.settings.downloadImages,
+			this.settings.imageFolder
 		);
 
 		// Add ribbon icon
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-		this.addRibbonIcon('sync', 'Sync from Pinbox', () => {
+		this.addRibbonIcon('pinbox-sync', 'Sync from Pinbox', () => {
 			void this.syncBookmarks();
 		});
 
@@ -69,7 +94,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 						await this.saveSettings();
 						this.updateAPIToken(token);
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-						new Notice('Login successful');
+						new Notice('登录成功');
 					})();
 				}).open();
 			}
@@ -124,6 +149,9 @@ export default class PinboxSyncerPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		// Update sync service settings
+		this.syncService.setDownloadImages(this.settings.downloadImages);
+		this.syncService.setImageFolder(this.settings.imageFolder);
 	}
 
 	updateAPIToken(token: string) {
@@ -133,7 +161,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 	async syncBookmarks() {
 		if (!this.settings.accessToken) {
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('Please login to Pinbox first');
+			new Notice('请先登录 Pinbox');
 			return;
 		}
 
@@ -148,7 +176,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 			console.error('Sync failed:', error);
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice(`Sync failed: ${errorMessage}`);
+			new Notice(`同步失败: ${errorMessage}`);
 		}
 	}
 
@@ -265,13 +293,13 @@ export default class PinboxSyncerPlugin extends Plugin {
 
 		if (!file) {
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('No file selected');
+			new Notice('未选择文件');
 			return;
 		}
 
 		if (!this.settings.accessToken) {
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('Please login to Pinbox first');
+			new Notice('请先登录 Pinbox');
 			return;
 		}
 
@@ -280,7 +308,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 			const fileExists = this.app.vault.getAbstractFileByPath(file.path);
 			if (!fileExists) {
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('File does not exist');
+				new Notice('文件不存在');
 				return;
 			}
 
@@ -290,7 +318,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 
 			if (!idMatch) {
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('Pinbox item ID not found in this file');
+				new Notice('在此文件中未找到 Pinbox 项目 ID');
 				return;
 			}
 
@@ -367,10 +395,16 @@ export default class PinboxSyncerPlugin extends Plugin {
 			if (success) {
 // /skip I need use Chinese due to the majority of the target users is Chinese.
 				new Notice('已从 Pinbox 删除');
+
 				// Delete the local file
 				await this.app.fileManager.trashFile(file);
 // /skip I need use Chinese due to the majority of the target users is Chinese.
 				new Notice('本地笔记已删除');
+
+				// Delete the image folder if downloadImages is enabled
+				if (this.settings.downloadImages) {
+					await this.deleteImageFolder(itemId);
+				}
 			} else {
 // /skip I need use Chinese due to the majority of the target users is Chinese.
 				new Notice('从 Pinbox 删除失败');
@@ -379,7 +413,26 @@ export default class PinboxSyncerPlugin extends Plugin {
 			console.error('Delete item error:', error);
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice(`Failed to delete item: ${errorMessage}`);
+			new Notice(`删除项目失败: ${errorMessage}`);
+		}
+	}
+
+	async deleteImageFolder(itemId: string) {
+		try {
+			const imageFolderPath = normalizePath(`${this.settings.imageFolder}/${itemId}`);
+			const imageFolder = this.app.vault.getAbstractFileByPath(imageFolderPath);
+
+			if (imageFolder) {
+				console.debug(`[PinboxSyncer] Deleting image folder: ${imageFolderPath}`);
+				// /skip Using Vault.delete() for folders is appropriate as FileManager doesn't support folder deletion
+				await this.app.vault.delete(imageFolder, true);
+				console.debug(`[PinboxSyncer] Image folder deleted: ${imageFolderPath}`);
+			} else {
+				console.debug(`[PinboxSyncer] Image folder not found: ${imageFolderPath}`);
+			}
+		} catch (error) {
+			console.error(`[PinboxSyncer] Error deleting image folder for item ${itemId}:`, error);
+			// Don't throw error, just log it - deletion of images is not critical
 		}
 	}
 
@@ -417,7 +470,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 		const dataviewPlugin = (this.app as unknown as AppWithPlugins).plugins.plugins['dataview'];
 		if (!dataviewPlugin) {
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('Please install and enable the Dataview plugin first');
+			new Notice('请先安装并启用 Dataview 插件');
 			return;
 		}
 
@@ -490,11 +543,11 @@ LIMIT 10
 			if (existingFile && existingFile instanceof TFile) {
 				await this.app.vault.modify(existingFile, indexContent);
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('Pinbox index updated');
+				new Notice('Pinbox 索引已更新');
 			} else {
 				await this.app.vault.create(indexPath, indexContent);
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('Pinbox index created');
+				new Notice('Pinbox 索引已创建');
 			}
 
 			// Open the index file only if requested
@@ -509,7 +562,7 @@ LIMIT 10
 			console.error('[PinboxSyncer] Create index error:', error);
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 // /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice(`Failed to create index: ${errorMessage}`);
+			new Notice(`创建索引失败: ${errorMessage}`);
 		}
 	}
 }
