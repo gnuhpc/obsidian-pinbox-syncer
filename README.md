@@ -24,6 +24,58 @@
 
 **简单来说：在手机上用 Pinbox 收藏，回到电脑时文章已经在 Obsidian 里等你了。**
 
+## 🏗️ 工作流程
+
+```mermaid
+graph TB
+    subgraph "内容来源"
+        A[微信公众号文章]
+        B[网页/博客]
+        C[其他内容]
+    end
+
+    subgraph "Pinbox 云端"
+        D[Pinbox 书签服务]
+        D1[书签元数据]
+        D2[标签/分类]
+    end
+
+    subgraph "Obsidian Pinbox Syncer 插件"
+        E[微信扫码登录]
+        F[同步服务]
+        G[内容抓取]
+        H[图片下载]
+        I[Markdown 转换]
+    end
+
+    subgraph "Obsidian Vault"
+        J[书签笔记]
+        K[本地图片]
+        L[Dataview 索引]
+    end
+
+    A --> D
+    B --> D
+    C --> D
+    D --> D1
+    D --> D2
+
+    E -.微信授权.-> D
+    D -- API --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    H --> K
+    F --> L
+
+    style D fill:#4a9eff
+    style E fill:#09bb07
+    style J fill:#7c3aed
+    style K fill:#7c3aed
+    style L fill:#7c3aed
+```
+
 ## ✨ 功能特性
 
 ### 🔄 书签同步
@@ -33,7 +85,9 @@
 
 ### 📝 内容抓取
 - **网页内容抓取**: 自动抓取书签对应的网页内容并转换为 Markdown
+- **图片本地化**: 支持自动下载文章中的图片到本地存储
 - **图片保留**: 完整保留网页中的图片，支持懒加载图片
+- **智能扩展名**: 自动识别图片格式（支持 jpg, png, webp, gif 等），处理微信图片 URL 的特殊格式
 - **智能清理**: 自动移除脚本、样式和微信公众号文章的固定 footer
 - **重试机制**: 对不稳定的网络请求进行最多 3 次重试
 - **加载检测**: 智能检测 "loading..." 占位符，自动重试直到获取真实内容
@@ -153,6 +207,33 @@ cp main.js manifest.json styles.css <your-vault>/.obsidian/plugins/pinbox-syncer
 2. 设置同步间隔（分钟）
 3. 插件会按设置的间隔自动同步
 
+### 图片本地保存
+
+插件支持将文章中的图片自动下载到本地，避免图片链接失效。
+
+#### 如何使用
+1. 打开 Obsidian 设置 → 第三方插件 → Pinbox Syncer
+2. 在"同步设置"部分找到"下载图片"选项
+3. 开启"下载图片"开关
+4. （可选）自定义"图片文件夹"路径，默认为 `Pinbox/pics`
+5. 同步书签后，文章中的图片会自动下载到本地并替换为 wiki 链接格式
+
+#### 使用建议
+- ✅ **推荐开启**: 如果你经常阅读微信公众号文章或担心图片链接失效
+- ⚠️ **注意空间**: 图片会占用 vault 存储空间，请根据需要开启
+- 💡 **已有书签**: 开启后只对新同步的书签生效，不会处理已存在的笔记
+
+#### 效果示例
+开启图片下载前：
+```markdown
+![image](https://example.com/image.jpg)
+```
+
+开启图片下载后：
+```markdown
+![[1234567890.jpg]]
+```
+
 ### 管理书签
 
 #### 删除书签
@@ -180,6 +261,8 @@ cp main.js manifest.json styles.css <your-vault>/.obsidian/plugins/pinbox-syncer
 - **同步文件夹**: 书签保存的文件夹位置（默认: `Pinbox`）
 - **自动同步**: 是否启用定时自动同步
 - **同步间隔**: 自动同步的时间间隔（分钟，默认: 60）
+- **下载图片**: 是否自动下载文章中的图片到本地（默认: 关闭）
+- **图片文件夹**: 图片保存的文件夹位置（默认: `Pinbox/pics`）
 - **立即同步**: 手动触发一次同步
 
 ### Dataview 索引设置
@@ -212,10 +295,9 @@ synced_at: 2025-01-13T10:00:00.000Z
 ```
 
 ### 正文内容
-- 访问原文链接
 - 用户笔记（如果有）
-- 封面图片（如果有）
 - 完整的网页内容（Markdown 格式）
+- 图片链接（如果启用了图片下载，将自动替换为本地路径）
 
 ## 🔧 依赖
 
@@ -331,6 +413,15 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 - [Turndown](https://github.com/mixmark-io/turndown) - HTML 到 Markdown 转换库
 
 ## 📋 更新日志
+
+### v1.0.1 (2025-01-15)
+
+- ✨ 新增文章图片本地下载功能
+- 🖼️ 智能识别图片格式，支持微信图片 URL 特殊参数处理
+- 🎨 优化 Ribbon 图标，采用 PINBOX 文字 + 循环箭头设计
+- 📝 精简笔记格式，移除冗余的标题和链接
+- 🐛 修复图片扩展名识别问题（处理 wx_fmt=other 的情况）
+- 🔧 改进 ESLint 配置，支持 Electron require 语法
 
 ### v1.0.0 (2025-01-13)
 

@@ -1,6 +1,6 @@
 {
   "name": "obsidian-pinbox-syncer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sync your Pinbox bookmarks to your vault.",
   "main": "main.js",
   "scripts": {
