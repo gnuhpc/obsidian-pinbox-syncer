@@ -27,53 +27,15 @@
 ## 🏗️ 工作流程
 
 ```mermaid
-graph TB
-    subgraph "内容来源"
-        A[微信公众号文章]
-        B[网页/博客]
-        C[其他内容]
-    end
+graph LR
+    A[📱 手机收藏] --> B[☁️ Pinbox]
+    C[💻 浏览器收藏] --> B
+    B --> D[🔄 插件同步]
+    D --> E[📝 Obsidian 笔记]
 
-    subgraph "Pinbox 云端"
-        D[Pinbox 书签服务]
-        D1[书签元数据]
-        D2[标签/分类]
-    end
-
-    subgraph "Obsidian Pinbox Syncer 插件"
-        E[微信扫码登录]
-        F[同步服务]
-        G[内容抓取]
-        H[图片下载]
-        I[Markdown 转换]
-    end
-
-    subgraph "Obsidian Vault"
-        J[书签笔记]
-        K[本地图片]
-        L[Dataview 索引]
-    end
-
-    A --> D
-    B --> D
-    C --> D
-    D --> D1
-    D --> D2
-
-    E -.微信授权.-> D
-    D -- API --> F
-    F --> G
-    G --> H
-    H --> I
-    I --> J
-    H --> K
-    F --> L
-
-    style D fill:#4a9eff
-    style E fill:#09bb07
-    style J fill:#7c3aed
-    style K fill:#7c3aed
-    style L fill:#7c3aed
+    style B fill:#4a9eff
+    style D fill:#09bb07
+    style E fill:#7c3aed
 ```
 
 ## ✨ 功能特性
