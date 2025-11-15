@@ -121,7 +121,9 @@ cp package.json "$PACKAGE_DIR/"
 cp package-lock.json "$PACKAGE_DIR/"
 cp tsconfig.json "$PACKAGE_DIR/"
 cp esbuild.config.mjs "$PACKAGE_DIR/"
+cp build-styles.mjs "$PACKAGE_DIR/"
 cp version-bump.mjs "$PACKAGE_DIR/"
+cp eslint.config.mjs "$PACKAGE_DIR/"
 
 # Copy documentation
 cp README.md "$PACKAGE_DIR/"
