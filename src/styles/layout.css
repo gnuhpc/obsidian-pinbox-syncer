@@ -1,0 +1,16 @@
+/* Layout adjustments */
+
+/* Ensure the title container has clearfix */
+.inline-title {
+    display: block;
+    overflow: visible;
+}
+
+/* Pinbox Index page layout */
+.pinbox-index h1 {
+    color: var(--text-normal);
+}
+
+.pinbox-index .dataview {
+    margin-top: 1em;
+}

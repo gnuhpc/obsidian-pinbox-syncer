@@ -1,0 +1,7 @@
+/* Pinbox Syncer Plugin Styles */
+
+/* Import all style modules */
+@import './layout.css';
+@import './components.css';
+@import './modals.css';
+@import './auth-modal.css';
