@@ -93,8 +93,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 						this.settings.accessToken = token;
 						await this.saveSettings();
 						this.updateAPIToken(token);
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-						new Notice('登录成功');
+						new Notice('登录成功'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 					})();
 				}).open();
 			}
@@ -160,8 +159,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 
 	async syncBookmarks() {
 		if (!this.settings.accessToken) {
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('请先登录 Pinbox');
+			new Notice('请先登录 Pinbox'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			return;
 		}
 
@@ -175,8 +173,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 		} catch (error) {
 			console.error('Sync failed:', error);
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice(`同步失败: ${errorMessage}`);
+			new Notice(`同步失败: ${errorMessage}`); // /skip I need use Chinese due to the majority of the target users is Chinese.
 		}
 	}
 
@@ -260,8 +257,8 @@ export default class PinboxSyncerPlugin extends Plugin {
 
 					const deleteBtn = buttonContainer.createEl('button', {
 						attr: {
-							'aria-label': '删除书签',
-							'title': '删除书签'
+							'aria-label': '删除书签', // /skip I need use Chinese due to the majority of the target users is Chinese.
+							'title': '删除书签' // /skip I need use Chinese due to the majority of the target users is Chinese.
 						}
 					});
 					deleteBtn.addClass('pinbox-delete-btn');
@@ -292,14 +289,12 @@ export default class PinboxSyncerPlugin extends Plugin {
 		console.debug('[PinboxSyncer] deleteCurrentItem called with file:', file);
 
 		if (!file) {
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('未选择文件');
+			new Notice('未选择文件'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			return;
 		}
 
 		if (!this.settings.accessToken) {
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('请先登录 Pinbox');
+			new Notice('请先登录 Pinbox'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			return;
 		}
 
@@ -307,8 +302,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 			// Check if file still exists
 			const fileExists = this.app.vault.getAbstractFileByPath(file.path);
 			if (!fileExists) {
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('文件不存在');
+				new Notice('文件不存在'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 				return;
 			}
 
@@ -317,8 +311,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 			const idMatch = content.match(/^id:\s*(\d+)/m);
 
 			if (!idMatch) {
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('在此文件中未找到 Pinbox 项目 ID');
+				new Notice('在此文件中未找到 Pinbox 项目 ID'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 				return;
 			}
 
@@ -327,42 +320,41 @@ export default class PinboxSyncerPlugin extends Plugin {
 			// Confirm deletion
 			const confirmed = await new Promise<boolean>((resolve) => {
 				const modal = new Modal(this.app);
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-				modal.titleEl.setText('⚠️ 确认删除');
+				modal.titleEl.setText('⚠️ 确认删除'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 
 				const contentDiv = modal.contentEl.createDiv();
 				contentDiv.addClass('pinbox-delete-modal');
 
 // /skip I need use Chinese due to the majority of the target users is Chinese.
 				contentDiv.createEl('p', {
-					text: `确定要删除这个书签吗?`,
+					text: `确定要删除这个书签吗?`, // /skip I need use Chinese due to the majority of the target users is Chinese.
 					cls: 'pinbox-delete-question'
 				});
 
 				contentDiv.createEl('p', {
-					text: `项目 ID: ${itemId}`,
+					text: `项目 ID: ${itemId}`, // /skip I need use Chinese due to the majority of the target users is Chinese.
 					cls: 'pinbox-delete-id'
 				});
 
 				const warningDiv = contentDiv.createDiv({ cls: 'pinbox-delete-warning' });
 				warningDiv.createEl('p', {
-					text: '⚠️ 此操作将会:',
+					text: '⚠️ 此操作将会:', // /skip I need use Chinese due to the majority of the target users is Chinese.
 					cls: 'pinbox-warning-title'
 				});
 
 				const warningList = warningDiv.createEl('ul');
-				warningList.createEl('li', { text: '从 Pinbox 云端删除此书签' });
-				warningList.createEl('li', { text: '删除本地 Obsidian 笔记文件' });
+				warningList.createEl('li', { text: '从 Pinbox 云端删除此书签' }); // /skip I need use Chinese due to the majority of the target users is Chinese.
+				warningList.createEl('li', { text: '删除本地 Obsidian 笔记文件' }); // /skip I need use Chinese due to the majority of the target users is Chinese.
 
 				warningDiv.createEl('p', {
-					text: '此操作无法撤销!',
+					text: '此操作无法撤销!', // /skip I need use Chinese due to the majority of the target users is Chinese.
 					cls: 'pinbox-warning-final'
 				});
 
 				const buttonContainer = modal.contentEl.createDiv({ cls: 'modal-button-container' });
 
 				const cancelButton = buttonContainer.createEl('button', {
-					text: '取消'
+					text: '取消' // /skip I need use Chinese due to the majority of the target users is Chinese.
 				});
 				cancelButton.addEventListener('click', () => {
 					modal.close();
@@ -370,7 +362,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 				});
 
 				const deleteButton = buttonContainer.createEl('button', {
-					text: '确认删除',
+					text: '确认删除', // /skip I need use Chinese due to the majority of the target users is Chinese.
 					cls: 'mod-warning'
 				});
 				deleteButton.addEventListener('click', () => {
@@ -387,33 +379,28 @@ export default class PinboxSyncerPlugin extends Plugin {
 				return;
 			}
 
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('正在从 Pinbox 删除...');
+			new Notice('正在从 Pinbox 删除...'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 
 			const success = await this.api.deleteItem(itemId);
 
 			if (success) {
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('已从 Pinbox 删除');
+				new Notice('已从 Pinbox 删除'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 
 				// Delete the local file
 				await this.app.fileManager.trashFile(file);
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('本地笔记已删除');
+				new Notice('本地笔记已删除'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 
 				// Delete the image folder if downloadImages is enabled
 				if (this.settings.downloadImages) {
 					await this.deleteImageFolder(itemId);
 				}
 			} else {
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('从 Pinbox 删除失败');
+				new Notice('从 Pinbox 删除失败'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			}
 		} catch (error) {
 			console.error('Delete item error:', error);
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice(`删除项目失败: ${errorMessage}`);
+			new Notice(`删除项目失败: ${errorMessage}`); // /skip I need use Chinese due to the majority of the target users is Chinese.
 		}
 	}
 
@@ -424,8 +411,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 
 			if (imageFolder) {
 				console.debug(`[PinboxSyncer] Deleting image folder: ${imageFolderPath}`);
-				// /skip Using Vault.delete() for folders is appropriate as FileManager doesn't support folder deletion
-				await this.app.vault.delete(imageFolder, true);
+				await this.app.fileManager.trashFile(imageFolder);
 				console.debug(`[PinboxSyncer] Image folder deleted: ${imageFolderPath}`);
 			} else {
 				console.debug(`[PinboxSyncer] Image folder not found: ${imageFolderPath}`);
@@ -469,8 +455,7 @@ export default class PinboxSyncerPlugin extends Plugin {
 		// Check if Dataview plugin is installed
 		const dataviewPlugin = (this.app as unknown as AppWithPlugins).plugins.plugins['dataview'];
 		if (!dataviewPlugin) {
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('请先安装并启用 Dataview 插件');
+			new Notice('请先安装并启用 Dataview 插件'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			return;
 		}
 
@@ -487,10 +472,10 @@ cssclass: pinbox-index
 
 \`\`\`dataview
 TABLE
-    title as "标题",
-    tags as "标签",
-    created_at as "创建时间",
-    view as "浏览量"
+    title as "标题", // /skip I need use Chinese due to the majority of the target users is Chinese.
+    tags as "标签", // /skip I need use Chinese due to the majority of the target users is Chinese.
+    created_at as "创建时间", // /skip I need use Chinese due to the majority of the target users is Chinese.
+    view as "浏览量" // /skip I need use Chinese due to the majority of the target users is Chinese.
 FROM "${this.settings.syncFolder}"
 WHERE id AND file.name != "${indexFileName}"
 SORT created_at DESC
@@ -514,10 +499,10 @@ const allTags = pages.array().flatMap(p => {
 const uniqueTags = [...new Set(allTags)];
 
 dv.paragraph(\`
-- **总项目数**: \${totalItems}
-- **类型**: \${types.length > 0 ? types.join(', ') : 'N/A'}
-- **总浏览量**: \${totalViews}
-- **标签数**: \${uniqueTags.length}
+- **总项目数**: \${totalItems} // /skip I need use Chinese due to the majority of the target users is Chinese.
+- **类型**: \${types.length > 0 ? types.join(', ') : 'N/A'} // /skip I need use Chinese due to the majority of the target users is Chinese.
+- **总浏览量**: \${totalViews} // /skip I need use Chinese due to the majority of the target users is Chinese.
+- **标签数**: \${uniqueTags.length} // /skip I need use Chinese due to the majority of the target users is Chinese.
 \`);
 \`\`\`
 
@@ -525,9 +510,9 @@ dv.paragraph(\`
 
 \`\`\`dataview
 TABLE WITHOUT ID
-    file.link as "标题",
-    created_at as "创建时间",
-    view as "浏览量"
+    file.link as "标题", // /skip I need use Chinese due to the majority of the target users is Chinese.
+    created_at as "创建时间", // /skip I need use Chinese due to the majority of the target users is Chinese.
+    view as "浏览量" // /skip I need use Chinese due to the majority of the target users is Chinese.
 FROM "${this.settings.syncFolder}"
 WHERE id AND file.name != "${indexFileName}"
 SORT created_at DESC
@@ -535,19 +520,17 @@ LIMIT 10
 \`\`\`
 
 ---
-*此索引自动生成。运行 "创建/更新 Pinbox 索引" 命令可刷新。*
+*此索引自动生成。运行 "创建/更新 Pinbox 索引" 命令可刷新。* // /skip I need use Chinese due to the majority of the target users is Chinese.
 `;
 
 			const existingFile = this.app.vault.getAbstractFileByPath(indexPath);
 
 			if (existingFile && existingFile instanceof TFile) {
 				await this.app.vault.modify(existingFile, indexContent);
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('Pinbox 索引已更新');
+				new Notice('Pinbox 索引已更新'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			} else {
 				await this.app.vault.create(indexPath, indexContent);
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-				new Notice('Pinbox 索引已创建');
+				new Notice('Pinbox 索引已创建'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			}
 
 			// Open the index file only if requested
@@ -561,8 +544,7 @@ LIMIT 10
 		} catch (error) {
 			console.error('[PinboxSyncer] Create index error:', error);
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice(`创建索引失败: ${errorMessage}`);
+			new Notice(`创建索引失败: ${errorMessage}`); // /skip I need use Chinese due to the majority of the target users is Chinese.
 		}
 	}
 }

@@ -27,7 +27,10 @@
 # - Source code complete
 #
 # Usage:
-#   ./prepare-release.sh
+#   ./prepare-release.sh           # Use current version
+#   ./prepare-release.sh patch     # Auto-increment patch version (e.g., 1.0.1 -> 1.0.2)
+#   ./prepare-release.sh minor     # Auto-increment minor version (e.g., 1.0.1 -> 1.1.0)
+#   ./prepare-release.sh major     # Auto-increment major version (e.g., 1.0.1 -> 2.0.0)
 #
 # Output:
 #   obsidian-pinbox-syncer-release-{VERSION}.tar.gz
@@ -48,14 +51,6 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-VERSION=$(node -p "require('./manifest.json').version")
-PACKAGE_NAME="obsidian-pinbox-syncer-release-${VERSION}.tar.gz"
-
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Preparing Release Package${NC}"
-echo -e "${BLUE}========================================${NC}"
-echo ""
-
 # Function to print step
 print_step() {
     echo -e "\n${YELLOW}>>> $1${NC}\n"
@@ -71,11 +66,86 @@ print_error() {
     echo -e "${RED}✗ $1${NC}"
 }
 
+# Function to print info
+print_info() {
+    echo -e "${BLUE}ℹ $1${NC}"
+}
+
 # Check if we're in the right directory
 if [ ! -f "manifest.json" ]; then
     print_error "manifest.json not found. Please run this script from the plugin root directory."
     exit 1
 fi
+
+if [ ! -f "package.json" ]; then
+    print_error "package.json not found. Please run this script from the plugin root directory."
+    exit 1
+fi
+
+# Check if version bump parameter is passed
+VERSION_BUMP=""
+if [ "$1" = "patch" ] || [ "$1" = "minor" ] || [ "$1" = "major" ]; then
+    VERSION_BUMP="$1"
+fi
+
+if [ -n "$VERSION_BUMP" ]; then
+    print_step "Step 0: Auto-incrementing version (${VERSION_BUMP})"
+
+    # Get current version from package.json
+    CURRENT_VERSION=$(node -p "require('./package.json').version")
+    print_info "Current version: ${CURRENT_VERSION}"
+
+    # Increment version based on type
+    NEW_VERSION=$(node -e "
+        const version = '${CURRENT_VERSION}'.split('.').map(Number);
+        const bump = '${VERSION_BUMP}';
+
+        if (bump === 'major') {
+            version[0] += 1;
+            version[1] = 0;
+            version[2] = 0;
+        } else if (bump === 'minor') {
+            version[1] += 1;
+            version[2] = 0;
+        } else if (bump === 'patch') {
+            version[2] += 1;
+        }
+
+        console.log(version.join('.'));
+    ")
+
+    print_info "New version: ${NEW_VERSION}"
+
+    # Update package.json
+    node -e "
+        const fs = require('fs');
+        const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+        pkg.version = '${NEW_VERSION}';
+        fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+    "
+
+    # Update manifest.json
+    node -e "
+        const fs = require('fs');
+        const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+        manifest.version = '${NEW_VERSION}';
+        fs.writeFileSync('manifest.json', JSON.stringify(manifest, null, '\t') + '\n');
+    "
+
+    print_success "Version updated: ${CURRENT_VERSION} → ${NEW_VERSION}"
+fi
+
+# Get the version (possibly updated)
+VERSION=$(node -p "require('./manifest.json').version")
+PACKAGE_NAME="obsidian-pinbox-syncer-release-${VERSION}.tar.gz"
+
+echo ""
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}Preparing Release Package${NC}"
+echo -e "${BLUE}========================================${NC}"
+echo ""
+echo -e "${BLUE}Version:${NC} ${GREEN}${VERSION}${NC}"
+echo ""
 
 print_step "Step 1: Building the plugin locally"
 
@@ -233,7 +303,8 @@ This will:
 - ✓ Pushes to GitHub (git@github.com:gnuhpc/obsidian-pinbox-syncer.git)
 - ✓ Creates and pushes a version tag
 - ✓ Creates a GitHub release with built files
-- **NO compilation required** - uses pre-built files from the package
+- **⚠️ IMPORTANT: NO compilation on deployment server** - only uses pre-built files from package
+- **All builds MUST be done on development machine before creating package**
 
 ### submit-obsidian.sh
 - Forks obsidianmd/obsidian-releases repository

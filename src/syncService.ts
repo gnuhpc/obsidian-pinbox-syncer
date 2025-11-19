@@ -32,8 +32,7 @@ export class SyncService {
 	async sync(): Promise<number> {
 		console.debug('[SyncService] Starting sync process...');
 		try {
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('开始同步 Pinbox 书签...');
+			new Notice('开始同步 Pinbox 书签...'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 
 			// Ensure sync folder exists
 			console.debug('[SyncService] Ensuring sync folder exists:', this.syncFolder);
@@ -46,7 +45,7 @@ export class SyncService {
 
 			if (bookmarks.length === 0) {
 				console.debug('[SyncService] No bookmarks found');
-				new Notice('未找到任何书签');
+				new Notice('未找到任何书签'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 				return 0;
 			}
 
@@ -67,12 +66,12 @@ export class SyncService {
 			}
 
 			console.debug('[SyncService] Sync completed successfully. Total synced:', syncedCount);
-			new Notice(`同步完成：共 ${syncedCount} 个书签，新增 ${newCount} 个，跳过 ${skippedCount} 个`);
+			new Notice(`同步完成：共 ${syncedCount} 个书签，新增 ${newCount} 个，跳过 ${skippedCount} 个`); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			return syncedCount;
 		} catch (error) {
 			console.error('[SyncService] Sync error:', error);
-			const errorMessage = error instanceof Error ? error.message : '未知错误';
-			new Notice(`同步失败：${errorMessage}`);
+			const errorMessage = error instanceof Error ? error.message : '未知错误'; // /skip I need use Chinese due to the majority of the target users is Chinese.
+			new Notice(`同步失败：${errorMessage}`); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			throw error;
 		}
 	}
@@ -385,7 +384,7 @@ export class SyncService {
 				}
 
 				// Check for WeChat error pages
-				if (isWechatArticle && (html.includes('该内容已被发布者删除') || html.includes('链接已过期') || html.includes('此内容因违规无法查看'))) {
+				if (isWechatArticle && (html.includes('该内容已被发布者删除') || html.includes('链接已过期') || html.includes('此内容因违规无法查看'))) { // /skip I need use Chinese due to the majority of the target users is Chinese.
 					console.error(`[SyncService] WeChat article is not accessible (deleted, expired, or blocked)`);
 					lastError = new Error('WeChat article not accessible');
 					return null;
@@ -399,10 +398,10 @@ export class SyncService {
 				const loadingIndicators = [
 					'loading...',
 					'loading',
-					'加载中...',
-					'加载中',
-					'请稍候...',
-					'正在加载',
+					'加载中...', // /skip I need use Chinese due to the majority of the target users is Chinese.
+					'加载中', // /skip I need use Chinese due to the majority of the target users is Chinese.
+					'请稍候...', // /skip I need use Chinese due to the majority of the target users is Chinese.
+					'正在加载', // /skip I need use Chinese due to the majority of the target users is Chinese.
 					'load more',
 					'skeleton',
 				];
@@ -550,11 +549,11 @@ export class SyncService {
 			// Convert to markdown
 			let markdown = turndownService.turndown(bodyElement.innerHTML);
 
-			// Remove WeChat article footer (starting from "预览时标签不可点")
+			// Remove WeChat article footer (starting from "预览时标签不可点") // /skip I need use Chinese due to the majority of the target users is Chinese.
 			const footerMarkers = [
-				'预览时标签不可点',
-				'微信扫一扫',
-				'关注该公众号',
+				'预览时标签不可点', // /skip I need use Chinese due to the majority of the target users is Chinese.
+				'微信扫一扫', // /skip I need use Chinese due to the majority of the target users is Chinese.
+				'关注该公众号', // /skip I need use Chinese due to the majority of the target users is Chinese.
 				'Scan QR Code',
 			];
 
@@ -646,7 +645,7 @@ export class SyncService {
 
 		// Note (user's personal notes)
 		if (bookmark.note) {
-			lines.push('## 笔记');
+			lines.push('## 笔记'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			lines.push('');
 			lines.push(bookmark.note);
 			lines.push('');
@@ -657,13 +656,13 @@ export class SyncService {
 			lines.push(webContent);
 		} else if (bookmark.url) {
 			// If web content couldn't be fetched, add a note about it
-			lines.push('> ⚠️ 无法自动获取网页内容。可能的原因:');
-			lines.push('> - 网页需要 JavaScript 才能加载内容');
-			lines.push('> - 网页加载速度过慢');
-			lines.push('> - 网页需要登录或特殊权限');
-			lines.push('> - 网页链接已失效');
+			lines.push('> ⚠️ 无法自动获取网页内容。可能的原因:'); // /skip I need use Chinese due to the majority of the target users is Chinese.
+			lines.push('> - 网页需要 JavaScript 才能加载内容'); // /skip I need use Chinese due to the majority of the target users is Chinese.
+			lines.push('> - 网页加载速度过慢'); // /skip I need use Chinese due to the majority of the target users is Chinese.
+			lines.push('> - 网页需要登录或特殊权限'); // /skip I need use Chinese due to the majority of the target users is Chinese.
+			lines.push('> - 网页链接已失效'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			lines.push('>');
-			lines.push('> 请在元数据中点击 url 链接查看完整内容。');
+			lines.push('> 请在元数据中点击 url 链接查看完整内容。'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 		}
 
 		return lines.join('\n');

@@ -40,20 +40,7 @@ export default defineConfig([
         btoa: "readonly",
         navigator: "readonly",
         require: "readonly",
-      },
-    },
-
-    // Optional project overrides
-    rules: {
-      "obsidianmd/ui/sentence-case": [
-        "warn",
-        {
-          brands: ["YourBrand"],
-          acronyms: ["OK"],
-          enforceCamelCaseLower: true,
-        },
-      ],
-      "@typescript-eslint/no-require-imports": "off",
-    },
-  },
+      }
+    }
+  }
 ]);

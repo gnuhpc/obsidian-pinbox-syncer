@@ -59,8 +59,8 @@ export class PinboxLoginWindow {
 
 		try {
 			// Access Electron's remote module
-			// /skip Electron require is necessary for desktop features
-			const electron = require('electron') as ElectronModule;
+			// Dynamic import of electron module for runtime access
+			const electron = window.require('electron') as ElectronModule;
 			const remote = electron.remote;
 			const BrowserWindow = remote.BrowserWindow;
 
@@ -85,7 +85,7 @@ export class PinboxLoginWindow {
 			win.once('ready-to-show', () => {
 				console.debug('[PinboxLoginWindow] Window ready to show');
 				if (this.window) {
-					this.window.setTitle('Pinbox 微信登录');
+					this.window.setTitle('Pinbox 微信登录'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 					this.window.show();
 				}
 			});
@@ -168,7 +168,7 @@ export class PinboxLoginWindow {
 
 		} catch (error) {
 			console.error('[PinboxLoginWindow] Failed to create BrowserWindow:', error);
-			throw new Error('无法创建登录窗口。请确保在 Obsidian 桌面版中运行此插件。');
+			throw new Error('无法创建登录窗口。请确保在 Obsidian 桌面版中运行此插件。'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 		}
 	}
 
@@ -185,8 +185,7 @@ export class PinboxLoginWindow {
 			}
 		} catch (error) {
 			console.error('[PinboxLoginWindow] Failed to load login page:', error);
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice('加载 Pinbox 登录页面失败');
+			new Notice('加载 Pinbox 登录页面失败'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			throw error;
 		}
 	}
@@ -200,8 +199,7 @@ export class PinboxLoginWindow {
 		this.hasCalledSuccess = true;
 
 		console.debug('[PinboxLoginWindow] Login successful, token obtained');
-// /skip I need use Chinese due to the majority of the target users is Chinese.
-		new Notice('登录成功！');
+		new Notice('登录成功！'); // /skip I need use Chinese due to the majority of the target users is Chinese.
 
 		// Close the window immediately to stop intercepting requests
 		this.close();
