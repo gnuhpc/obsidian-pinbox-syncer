@@ -382,7 +382,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 ## 📋 更新日志
 
-### 未发布
+### v1.0.2 (2026-08-09)
 
 - 🐛 修复旧登录窗口网络监听器拦截删除请求，导致 `net::ERR_CONNECTION_CLOSED` 的问题
 - 🗑️ 删除书签时同步移入废纸篓：本地 Markdown 与其引用的 Pinbox 本地图片
