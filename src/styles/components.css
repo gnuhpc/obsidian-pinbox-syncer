@@ -1,8 +1,11 @@
 /* Delete button component */
 .pinbox-delete-button {
-    float: right;
-    margin-left: 8px;
-    margin-top: 4px;
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    z-index: 1000;
+    margin: 0;
+    pointer-events: auto;
 }
 
 .pinbox-delete-btn {

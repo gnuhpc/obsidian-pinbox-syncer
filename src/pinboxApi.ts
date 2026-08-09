@@ -59,11 +59,11 @@ export class PinboxAPI {
 
 	constructor(accessToken: string) {
 		this.accessToken = accessToken;
-		console.debug('[PinboxAPI] Initialized with token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'empty');
+		console.debug('[PinboxAPI] Initialized with token:', accessToken ? 'set' : 'empty');
 	}
 
 	setAccessToken(token: string) {
-		console.debug('[PinboxAPI] Setting new token:', token ? `${token.substring(0, 20)}...` : 'empty');
+		console.debug('[PinboxAPI] Setting new token:', token ? 'set' : 'empty');
 		this.accessToken = token;
 		this.userId = null; // Reset user ID when token changes
 	}
@@ -269,7 +269,7 @@ export class PinboxAPI {
 			const userId = this.getUserId();
 			const url = `${this.baseUrl}/api/user/${userId}/store?storeIds[]=${itemId}`;
 			console.debug('[PinboxAPI] Delete URL:', url);
-			console.debug('[PinboxAPI] Access Token:', this.accessToken ? `${this.accessToken.substring(0, 20)}...` : 'empty');
+			console.debug('[PinboxAPI] Access token is set:', Boolean(this.accessToken));
 
 			const params: RequestUrlParam = {
 				url: url,
@@ -288,7 +288,7 @@ export class PinboxAPI {
 			console.debug(`[PinboxAPI] Delete item ${itemId} response status:`, response.status);
 			console.debug(`[PinboxAPI] Delete item ${itemId} response:`, response);
 
-			if (response.status === 200 || response.status === 204) {
+			if (response.status >= 200 && response.status < 300) {
 				console.debug(`[PinboxAPI] Successfully deleted item ${itemId}`);
 				return true;
 			} else {
@@ -334,7 +334,7 @@ export class PinboxAPI {
 					if (data.status === 'completed' || data.status === 'success' || data.token || data.access_token) {
 						const token = data.token || data.access_token || data.accessToken || data.data?.token || data.data?.access_token;
 						if (token) {
-							console.debug('[PinboxAPI] Token found in session response:', token.substring(0, 20) + '...');
+							console.debug('[PinboxAPI] Token found in session response');
 							return token;
 						}
 					} else {
@@ -390,7 +390,7 @@ export class PinboxAPI {
 						const token = data.token || data.access_token || data.accessToken || data.data?.token || data.data?.access_token;
 
 						if (token) {
-							console.debug('[PinboxAPI] Token found:', token.substring(0, 20) + '...');
+							console.debug('[PinboxAPI] Token found');
 							return token;
 						}
 					}

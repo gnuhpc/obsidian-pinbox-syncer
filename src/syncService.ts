@@ -8,6 +8,7 @@ export class SyncService {
 	private syncFolder: string;
 	private downloadImages: boolean;
 	private imageFolder: string;
+	private progressCallback: ((progress: string) => void) | null = null;
 
 	constructor(app: App, api: PinboxAPI, syncFolder: string, downloadImages: boolean = false, imageFolder: string = 'pics') {
 		this.app = app;
@@ -15,6 +16,10 @@ export class SyncService {
 		this.syncFolder = syncFolder;
 		this.downloadImages = downloadImages;
 		this.imageFolder = imageFolder;
+	}
+
+	setProgressCallback(callback: ((progress: string) => void) | null) {
+		this.progressCallback = callback;
 	}
 
 	setSyncFolder(folder: string) {
@@ -32,7 +37,9 @@ export class SyncService {
 	async sync(): Promise<number> {
 		console.debug('[SyncService] Starting sync process...');
 		try {
-			new Notice('开始同步 Pinbox 书签...'); // /skip I need use Chinese due to the majority of the target users is Chinese.
+			if (this.progressCallback) {
+				this.progressCallback('正在获取书签列表...'); // /skip I need use Chinese due to the majority of the target users is Chinese.
+			}
 
 			// Ensure sync folder exists
 			console.debug('[SyncService] Ensuring sync folder exists:', this.syncFolder);
@@ -45,7 +52,9 @@ export class SyncService {
 
 			if (bookmarks.length === 0) {
 				console.debug('[SyncService] No bookmarks found');
-				new Notice('未找到任何书签'); // /skip I need use Chinese due to the majority of the target users is Chinese.
+				if (this.progressCallback) {
+					this.progressCallback('未找到任何书签'); // /skip I need use Chinese due to the majority of the target users is Chinese.
+				}
 				return 0;
 			}
 
@@ -56,6 +65,12 @@ export class SyncService {
 			console.debug('[SyncService] Starting to create/update bookmark files...');
 			for (const bookmark of bookmarks) {
 				console.debug(`[SyncService] Processing bookmark ${syncedCount + 1}/${bookmarks.length}: ${bookmark.title} (id=${bookmark.id})`);
+
+				// Update progress
+				if (this.progressCallback) {
+					this.progressCallback(`正在同步 ${syncedCount + 1}/${bookmarks.length}：${bookmark.title || '无标题'}`); // /skip I need use Chinese due to the majority of the target users is Chinese.
+				}
+
 				const result = await this.createOrUpdateBookmark(bookmark);
 				syncedCount++;
 				if (result === 'created') {
@@ -66,12 +81,9 @@ export class SyncService {
 			}
 
 			console.debug('[SyncService] Sync completed successfully. Total synced:', syncedCount);
-			new Notice(`同步完成：共 ${syncedCount} 个书签，新增 ${newCount} 个，跳过 ${skippedCount} 个`); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			return syncedCount;
 		} catch (error) {
 			console.error('[SyncService] Sync error:', error);
-			const errorMessage = error instanceof Error ? error.message : '未知错误'; // /skip I need use Chinese due to the majority of the target users is Chinese.
-			new Notice(`同步失败：${errorMessage}`); // /skip I need use Chinese due to the majority of the target users is Chinese.
 			throw error;
 		}
 	}
@@ -595,10 +607,10 @@ export class SyncService {
 		// Frontmatter (YAML metadata)
 		lines.push('---');
 		lines.push(`id: ${bookmark.id}`);
-		lines.push(`title: "${(bookmark.title || 'Untitled').replace(/"/g, '\\"')}"`);
-		lines.push(`url: "${bookmark.url}"`);
-		lines.push(`item_type: ${bookmark.item_type || 'unknown'}`);
-		lines.push(`created_at: ${bookmark.created_at}`);
+		lines.push(`标题: "${(bookmark.title || 'Untitled').replace(/"/g, '\\"')}"`);
+		lines.push(`链接: "${bookmark.url}"`);
+		lines.push(`类型: ${bookmark.item_type || 'unknown'}`);
+		lines.push(`创建时间: ${bookmark.created_at}`);
 
 		if (bookmark.tags && bookmark.tags.length > 0) {
 			const tags = bookmark.tags.map(tag => {
@@ -611,7 +623,7 @@ export class SyncService {
 			}).filter(t => t);
 
 			if (tags.length > 0) {
-				lines.push('tags:');
+				lines.push('标签:');
 				tags.forEach(tag => {
 					lines.push(`  - ${tag}`);
 				});
@@ -619,27 +631,27 @@ export class SyncService {
 		}
 
 		if (bookmark.collection_id !== null && bookmark.collection_id !== undefined) {
-			lines.push(`collection_id: ${bookmark.collection_id}`);
+			lines.push(`收藏夹ID: ${bookmark.collection_id}`);
 		}
 
 		if (bookmark.view !== undefined) {
-			lines.push(`view: ${bookmark.view}`);
+			lines.push(`浏览量: ${bookmark.view}`);
 		}
 
 		if (bookmark.brief) {
-			lines.push(`brief: "${bookmark.brief.replace(/"/g, '\\"').replace(/\n/g, ' ')}"`);
+			lines.push(`摘要: "${bookmark.brief.replace(/"/g, '\\"').replace(/\n/g, ' ')}"`);
 		}
 
 		if (bookmark.description) {
-			lines.push(`description: "${bookmark.description.replace(/"/g, '\\"').replace(/\n/g, ' ')}"`);
+			lines.push(`描述: "${bookmark.description.replace(/"/g, '\\"').replace(/\n/g, ' ')}"`);
 		}
 
 		const imageUrl = bookmark.thumbnail || bookmark.cover;
 		if (imageUrl) {
-			lines.push(`image: "${imageUrl}"`);
+			lines.push(`图片: "${imageUrl}"`);
 		}
 
-		lines.push(`synced_at: ${new Date().toISOString()}`);
+		lines.push(`同步时间: ${new Date().toISOString()}`);
 		lines.push('---');
 		lines.push('');
 

@@ -104,10 +104,13 @@ export class PinboxSettingTab extends PluginSettingTab {
 			.setName('立即同步') // /skip I need use Chinese due to the majority of the target users is Chinese.
 			.setDesc('手动触发一次同步') // /skip I need use Chinese due to the majority of the target users is Chinese.
 			.addButton(button => button
-				.setButtonText('开始同步') // /skip I need use Chinese due to the majority of the target users is Chinese.
+				.setButtonText(this.plugin.isSyncing ? '同步中...' : '开始同步') // /skip I need use Chinese due to the majority of the target users is Chinese.
 				.setCta()
+				.setDisabled(this.plugin.isSyncing)
 				.onClick(async () => {
 					await this.plugin.syncBookmarks();
+					// Refresh the settings display to update button state
+					this.display();
 				}));
 
 		// Dataview Index settings
@@ -150,24 +153,40 @@ export class PinboxSettingTab extends PluginSettingTab {
 		if (this.plugin.settings.enableDataviewIndex && isDataviewInstalled) {
 // /skip I need use Chinese due to the majority of the target users is Chinese.
 			new Setting(containerEl)
-				.setName('索引文件路径') // /skip I need use Chinese due to the majority of the target users is Chinese.
-				.setDesc('Dataview 索引文件的保存位置（相对于 vault 根目录）') // /skip I need use Chinese due to the majority of the target users is Chinese.
-				.addText(text => text
-					.setPlaceholder('Pinbox/!Pinbox Index.md')
-					.setValue(this.plugin.settings.dataviewIndexPath)
+				.setName('索引格式') // /skip I need use Chinese due to the majority of the target users is Chinese.
+				.setDesc('选择索引文件的格式') // /skip I need use Chinese due to the majority of the target users is Chinese.
+				.addDropdown(dropdown => dropdown
+					.addOption('dataview', 'Dataview 查询')
+					.addOption('base', 'Obsidian Base')
+					.addOption('none', '不生成索引')
+					.setValue(this.plugin.settings.indexFormat)
 					.onChange(async (value) => {
-						this.plugin.settings.dataviewIndexPath = value;
+						this.plugin.settings.indexFormat = value as 'dataview' | 'base' | 'none';
 						await this.plugin.saveSettings();
+						this.display(); // Refresh to show/hide other settings
 					}));
 
-			new Setting(containerEl)
-				.setName('立即创建/更新索引') // /skip I need use Chinese due to the majority of the target users is Chinese.
-				.setDesc('手动创建或更新 Dataview 索引文件') // /skip I need use Chinese due to the majority of the target users is Chinese.
-				.addButton(button => button
-					.setButtonText('创建索引') // /skip I need use Chinese due to the majority of the target users is Chinese.
-					.onClick(async () => {
-						await this.plugin.createPinboxIndex(true);
-					}));
+			if (this.plugin.settings.indexFormat !== 'none') {
+				new Setting(containerEl)
+					.setName('索引文件路径') // /skip I need use Chinese due to the majority of the target users is Chinese.
+					.setDesc('索引文件的保存位置（相对于 vault 根目录，不需要包含扩展名）') // /skip I need use Chinese due to the majority of the target users is Chinese.
+					.addText(text => text
+						.setPlaceholder('Pinbox/!Pinbox Index')
+						.setValue(this.plugin.settings.dataviewIndexPath)
+						.onChange(async (value) => {
+							this.plugin.settings.dataviewIndexPath = value;
+							await this.plugin.saveSettings();
+						}));
+
+				new Setting(containerEl)
+					.setName('立即创建/更新索引') // /skip I need use Chinese due to the majority of the target users is Chinese.
+					.setDesc('手动创建或更新索引文件') // /skip I need use Chinese due to the majority of the target users is Chinese.
+					.addButton(button => button
+						.setButtonText('创建索引') // /skip I need use Chinese due to the majority of the target users is Chinese.
+						.onClick(async () => {
+							await this.plugin.createPinboxIndex(true);
+						}));
+			}
 		}
 
 		// Image download settings

@@ -1,6 +1,8 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import { copyFileSync, mkdirSync } from "fs";
+import { join } from "path";
 
 const banner =
 `/*
@@ -10,6 +12,27 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === 'production');
+
+// Test vault plugin directory (use the actual plugin folder name)
+const testVaultPath = "/Users/gnuhpc/Documents/test-note/.obsidian/plugins/pinbox-syncer";
+
+// Plugin to copy files to test vault after build
+const copyToTestVault = {
+	name: 'copy-to-test-vault',
+	setup(build) {
+		build.onEnd(() => {
+			try {
+				mkdirSync(testVaultPath, { recursive: true });
+				copyFileSync('main.js', join(testVaultPath, 'main.js'));
+				copyFileSync('manifest.json', join(testVaultPath, 'manifest.json'));
+				copyFileSync('styles.css', join(testVaultPath, 'styles.css'));
+				console.log('✓ Copied files to test vault');
+			} catch (err) {
+				console.error('Failed to copy to test vault:', err);
+			}
+		});
+	}
+};
 
 const context = await esbuild.context({
 	banner: {
@@ -37,7 +60,11 @@ const context = await esbuild.context({
 	logLevel: "info",
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
+	// Keep console statements for debugging
+	drop: [],
+	pure: [],
 	outfile: 'main.js',
+	plugins: [copyToTestVault],
 });
 
 if (prod) {

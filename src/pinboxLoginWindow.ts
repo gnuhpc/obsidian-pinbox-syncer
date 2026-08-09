@@ -1,4 +1,5 @@
 import { Notice } from 'obsidian';
+import { clearWebRequestListeners, WebRequestListenerController } from './webRequestUtils';
 
 // Define minimal Electron types we need
 interface ElectronBrowserWindow {
@@ -9,11 +10,9 @@ interface ElectronBrowserWindow {
 	once(event: string, callback: () => void): void;
 	on(event: string, callback: () => void): void;
 	webContents: {
+		id: number;
 		session: {
-			webRequest: {
-				onSendHeaders(filter: unknown, callback: (details: Record<string, unknown>) => void): void;
-				onCompleted(filter: unknown, callback: (details: Record<string, unknown>) => void): void;
-			};
+			webRequest: WebRequestListenerController;
 		};
 	};
 }
@@ -41,6 +40,7 @@ interface BrowserWindowOptions {
 interface RequestDetails {
 	url?: string;
 	statusCode?: number;
+	webContentsId?: number;
 	requestHeaders?: Record<string, string>;
 }
 
@@ -52,7 +52,7 @@ export class PinboxLoginWindow {
 	private window: ElectronBrowserWindow | null;
 	private onSuccess: (token: string) => void;
 	private hasCalledSuccess: boolean = false;
-	private requestListeners: unknown[] = [];
+	private clearRequestListeners: (() => void) | null = null;
 
 	constructor(onSuccess: (token: string) => void) {
 		this.onSuccess = onSuccess;
@@ -92,6 +92,10 @@ export class PinboxLoginWindow {
 
 			// Get the session
 			const session = win.webContents.session;
+			this.clearRequestListeners = () => {
+				clearWebRequestListeners(session.webRequest);
+				this.clearRequestListeners = null;
+			};
 
 			// Monitor requests to detect successful login
 			// Look for requests that contain the auth token
@@ -106,19 +110,23 @@ export class PinboxLoginWindow {
 			// Listen for request headers to capture the token
 			session.webRequest.onSendHeaders(loginFilter, (details: Record<string, unknown>) => {
 				const typedDetails = details as RequestDetails;
+				if (typedDetails.webContentsId !== win.webContents.id) {
+					return;
+				}
+
 				console.debug('[PinboxLoginWindow] Request detected:', typedDetails.url);
 
 				// Check Authorization header
 				const requestHeaders = typedDetails.requestHeaders;
 				if (requestHeaders && requestHeaders['Authorization']) {
 					const authHeader = requestHeaders['Authorization'];
-					console.debug('[PinboxLoginWindow] Found Authorization header:', authHeader);
+					console.debug('[PinboxLoginWindow] Found Authorization header');
 
 					// Extract token from "Bearer <token>" format
 					const match = authHeader.match(/Bearer\s+(.+)/);
 					if (match && match[1]) {
 						const token = match[1];
-						console.debug('[PinboxLoginWindow] Extracted token:', token.substring(0, 20) + '...');
+						console.debug('[PinboxLoginWindow] Extracted authentication token');
 						this.handleLoginSuccess(token);
 						return;
 					}
@@ -149,6 +157,10 @@ export class PinboxLoginWindow {
 			// Also monitor completed requests for response data
 			session.webRequest.onCompleted(loginFilter, (details: Record<string, unknown>) => {
 				const typedDetails = details as RequestDetails;
+				if (typedDetails.webContentsId !== win.webContents.id) {
+					return;
+				}
+
 				if (typedDetails.statusCode === 200) {
 					console.debug('[PinboxLoginWindow] Successful request to:', typedDetails.url);
 
@@ -163,6 +175,7 @@ export class PinboxLoginWindow {
 			// Handle window close
 			win.on('closed', () => {
 				console.debug('[PinboxLoginWindow] Window closed');
+				this.clearRequestListeners?.();
 				this.window = null;
 			});
 
@@ -214,30 +227,14 @@ export class PinboxLoginWindow {
 	}
 
 	close() {
+		console.debug('[PinboxLoginWindow] Closing window and removing listeners');
+		try {
+			this.clearRequestListeners?.();
+		} catch (error: unknown) {
+			console.debug('[PinboxLoginWindow] Error clearing listeners:', error);
+		}
+
 		if (this.window) {
-			console.debug('[PinboxLoginWindow] Closing window and removing listeners');
-
-			// Remove all request listeners
-			try {
-				const session = this.window.webContents.session;
-				if (session && session.webRequest) {
-					console.debug('[PinboxLoginWindow] Clearing web request listeners');
-					// Clear all listeners by creating new filter that matches nothing
-					try {
-						session.webRequest.onSendHeaders(null as unknown, () => {
-							// Empty callback to clear listeners
-						});
-						session.webRequest.onCompleted(null as unknown, () => {
-							// Empty callback to clear listeners
-						});
-					} catch (error: unknown) {
-						console.debug('[PinboxLoginWindow] Error clearing listeners:', error);
-					}
-				}
-			} catch (error: unknown) {
-				console.debug('[PinboxLoginWindow] Error accessing session:', error);
-			}
-
 			this.window.close();
 			this.window = null;
 		}
